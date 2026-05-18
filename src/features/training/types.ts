@@ -1,0 +1,127 @@
+export interface FormState {
+  job_id: string
+  // Required
+  model: string
+  name: string
+  project: string
+  dataset_source: 'gs' | 'url'
+  dataset_gs_uri: string
+  train_dataset_url: string
+  // Optional general
+  device: string
+  install_gsutil: boolean
+  save: boolean
+  // Phase 1 — stored as strings so inputs can be left empty (= not sent)
+  ph1_epochs: string
+  ph1_patience: string
+  ph1_imgsz: string
+  ph1_batch: string
+  ph1_workers: string
+  ph1_freeze: string
+  ph1_lr0: string
+  ph1_lrf: string
+  ph1_mosaic: string
+  ph1_close_mosaic: string
+  ph1_degrees: string
+  ph1_translate: string
+  ph1_aug_scale: string
+  ph1_fliplr: string
+  ph1_copy_paste: string
+  ph1_cls: string
+  ph1_erasing: string
+  ph1_class_weights_auto: string
+  ph1_class_weights_power: string
+  ph1_per_class_metrics: string
+  ph1_save_period: string
+  // Phase 2
+  ph2_epochs: string
+  ph2_patience: string
+  ph2_imgsz: string
+  ph2_batch: string
+  ph2_workers: string
+  ph2_freeze: string
+  ph2_lr0: string
+  ph2_lrf: string
+  ph2_mosaic: string
+  ph2_close_mosaic: string
+  ph2_degrees: string
+  ph2_translate: string
+  ph2_aug_scale: string
+  ph2_fliplr: string
+  ph2_copy_paste: string
+  ph2_cls: string
+  ph2_erasing: string
+  ph2_class_weights_auto: string
+  ph2_class_weights_power: string
+  ph2_per_class_metrics: string
+  ph2_save_period: string
+  ph2_dropout: string
+  ph2_cos_lr: string
+  ph2_focal_loss: string
+  ph2_focal_gamma: string
+}
+
+export const INITIAL: FormState = {
+  job_id: '',
+  model: 'yolo11s.pt',
+  name: 'exp_2fases',
+  project: 'runs',
+  dataset_source: 'gs',
+  dataset_gs_uri: 'gs://dataset-unlu-module-4/taco_yolo_13_seg.zip',
+  train_dataset_url: '',
+  device: '0',
+  install_gsutil: true,
+  save: true,
+  ph1_epochs: '3',
+  ph1_patience: '',
+  ph1_imgsz: '896',
+  ph1_batch: '',
+  ph1_workers: '',
+  ph1_freeze: '',
+  ph1_lr0: '',
+  ph1_lrf: '',
+  ph1_mosaic: '',
+  ph1_close_mosaic: '',
+  ph1_degrees: '',
+  ph1_translate: '',
+  ph1_aug_scale: '',
+  ph1_fliplr: '',
+  ph1_copy_paste: '',
+  ph1_cls: '',
+  ph1_erasing: '',
+  ph1_class_weights_auto: '',
+  ph1_class_weights_power: '',
+  ph1_per_class_metrics: '',
+  ph1_save_period: '',
+  ph2_epochs: '5',
+  ph2_patience: '',
+  ph2_imgsz: '896',
+  ph2_batch: '',
+  ph2_workers: '',
+  ph2_freeze: '',
+  ph2_lr0: '',
+  ph2_lrf: '',
+  ph2_mosaic: '',
+  ph2_close_mosaic: '',
+  ph2_degrees: '',
+  ph2_translate: '',
+  ph2_aug_scale: '',
+  ph2_fliplr: '',
+  ph2_copy_paste: '',
+  ph2_cls: '',
+  ph2_erasing: '',
+  ph2_class_weights_auto: '',
+  ph2_class_weights_power: '',
+  ph2_per_class_metrics: '',
+  ph2_save_period: '',
+  ph2_dropout: '',
+  ph2_cos_lr: '',
+  ph2_focal_loss: '',
+  ph2_focal_gamma: '',
+}
+
+export interface JobEntry {
+  job_id: string
+  status: string
+  submitted_at: string
+}

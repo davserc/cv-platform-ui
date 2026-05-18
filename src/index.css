@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@keyframes orbit-cw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes orbit-ccw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+
+@keyframes pulse-scale {
+  0%, 100% { transform: scale(1);    opacity: 0.8; }
+  50%       { transform: scale(1.14); opacity: 1;   }
+}
+
+/* Single-animation orbit: each item carries its own circular path.
+   The value 78px must match ORBIT_R in TrainingSpinner.tsx. */
+@keyframes orbit-item {
+  from { transform: rotate(0deg)   translateX(78px) rotate(0deg);    }
+  to   { transform: rotate(360deg) translateX(78px) rotate(-360deg); }
+}

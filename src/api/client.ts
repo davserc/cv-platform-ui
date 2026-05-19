@@ -100,6 +100,15 @@ export interface TrainResponse {
 export const submitTrainingJob = (payload: TrainRequest) =>
   request<TrainResponse>('/train/', { method: 'POST', body: JSON.stringify(payload) })
 
+export interface TrainLogsResponse {
+  job_id: string
+  log: string
+  available: boolean
+}
+
+export const fetchTrainingLogs = (jobId: string) =>
+  request<TrainLogsResponse>(`/train/${jobId}/logs`)
+
 // --- Models ---
 export interface ModelSummary {
   model_id: string

@@ -35,7 +35,7 @@ export function buildConfig(f: FormState): TrainConfig {
 
   for (const key of PHASE_KEYS) {
     const v = numOpt(f[key] as string)
-    if (v !== undefined) cfg[key] = v
+    if (v !== undefined) (cfg as Record<string, unknown>)[key] = v
   }
 
   return cfg

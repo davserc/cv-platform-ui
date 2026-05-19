@@ -48,14 +48,15 @@ function AnimatedDots() {
   return <span className="font-light text-gray-500">{'·'.repeat(n)}</span>
 }
 
-interface Props { jobId?: string }
+interface Props { jobId?: string; compact?: boolean }
 
-export default function TrainingSpinner({ jobId }: Props) {
+export default function TrainingSpinner({ jobId, compact }: Props) {
   return (
     <div
       role="status"
       aria-label="Entrenando modelo de clasificación de residuos"
       className="flex flex-col items-center gap-7 py-12"
+      style={compact ? { zoom: 0.58 } : undefined}
     >
       <div className="relative" style={{ width: STAGE, height: STAGE }}>
 

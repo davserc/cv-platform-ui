@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchTrainingLogs } from '../../../api/client'
+import TrainingSpinner from '../../../components/TrainingSpinner'
 
 const POLL_INTERVAL_MS = 15_000
 
@@ -72,9 +73,7 @@ export default function TrainingLogViewer({ jobId }: Props) {
         className="overflow-auto max-h-80 bg-gray-950 p-3"
       >
         {!available ? (
-          <p className="text-xs text-gray-600 italic">
-            Log aún no disponible — el training acaba de comenzar o todavía no llegó el primer ciclo de descarga (~75s)...
-          </p>
+          <TrainingSpinner jobId={jobId} compact />
         ) : log ? (
           <pre className="text-xs font-mono text-gray-300 whitespace-pre-wrap leading-relaxed">
             {log}

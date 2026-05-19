@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchTrainingLogs } from '../../../api/client'
-import TrainingSpinner from '../../../components/TrainingSpinner'
+import PixelTrainingLoader from '../../../components/PixelTrainingLoader'
 
 const POLL_INTERVAL_MS = 15_000
 
@@ -73,7 +73,7 @@ export default function TrainingLogViewer({ jobId }: Props) {
         className="overflow-auto max-h-80 bg-gray-950 p-3"
       >
         {!available ? (
-          <TrainingSpinner jobId={jobId} compact />
+          <PixelTrainingLoader jobId={jobId} />
         ) : log ? (
           <pre className="text-xs font-mono text-gray-300 whitespace-pre-wrap leading-relaxed">
             {log}

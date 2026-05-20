@@ -53,9 +53,9 @@ const FRAME_SEQ = [
   { frame: 0, duration: 250  },  // 0: INICIO    — objeto aparece
   { frame: 0, duration: 2200 },  // 1: SCANNING  — frame fijo, CSS scan activo
   { frame: 5, duration: 750  },  // 2: COMPLETADO — sprite verde columna 6
-  { frame: 6, duration: 500  },  // 3: TRANSICIÓN — barra de wipe + fade
+  { frame: 6, duration: 560  },  // 3: TRANSICIÓN — exit(200ms) + wipe(360ms)
 ]
-const OBJECT_HOLD = 80
+const OBJECT_HOLD = 0
 
 const ITEMS = [
   { name: 'Botella de Plástico', cat: 'plástico'    },
@@ -161,8 +161,8 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           }}
         />
 
-        {/* ── Sprite COMPLETADO (frame 5) — div independiente garantizado ── */}
-        {isComplete && (
+        {/* ── Sprite COMPLETADO — visible en step 2 Y step 3 (animación de salida) ── */}
+        {(isComplete || isTransition) && (
           <div
             style={{
               position: 'absolute',
@@ -173,7 +173,10 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
               backgroundPosition: `-${FRAME_X[5] + ITEM_X_FIX[item]}px -${bgY}px`,
               imageRendering: 'pixelated',
               transformOrigin: 'top left',
-              animation: 'item-appear 180ms ease-out, idle-float 3.5s ease-in-out 180ms infinite',
+              // Durante TRANSICIÓN: exit animation; durante COMPLETADO: aparece y flota
+              animation: isTransition
+                ? 'complete-exit 200ms ease-in forwards'
+                : 'item-appear 180ms ease-out, idle-float 3.5s ease-in-out 180ms infinite',
               filter: GLOW,
             }}
           />
@@ -203,25 +206,27 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           }} />
         )}
 
-        {/* ── Transición: barra de wipe que barre de arriba a abajo ── */}
+        {/* ── Transición: exit(0-200ms) → wipe barre(200-560ms) ──── */}
         {isTransition && (
           <>
-            {/* Fondo oscuro */}
+            {/* Fondo oscuro — aparece gradualmente con el exit */}
             <div className="absolute inset-0 pointer-events-none"
-              style={{ background: 'rgba(0,5,10,0.97)' }} />
-            {/* Barra cyan que barre */}
+              style={{ background: 'rgba(0,5,10,0.95)', animation: 'bg-fade-in 200ms ease-in forwards' }} />
+            {/* Barra cyan — empieza cuando el exit termina (delay 180ms) */}
             <div className="absolute inset-x-0 pointer-events-none" style={{
               height: 3,
               background: 'linear-gradient(90deg, transparent 0%, #00f6ff 25%, #fff 50%, #00f6ff 75%, transparent 100%)',
               boxShadow: '0 0 8px #00f6ff, 0 0 24px rgba(0,246,255,0.7), 0 0 48px rgba(0,246,255,0.3)',
               filter: 'blur(0.5px)',
-              animation: 'system-wipe 480ms ease-in-out forwards',
+              animation: 'system-wipe 360ms 180ms ease-in-out forwards',
+              opacity: 0,
             }} />
-            {/* Eco de la barra (trail) */}
+            {/* Trail de la barra */}
             <div className="absolute inset-x-0 pointer-events-none" style={{
-              height: 30,
-              background: 'linear-gradient(180deg, rgba(0,246,255,0.08) 0%, transparent 100%)',
-              animation: 'system-wipe-trail 480ms ease-in-out forwards',
+              height: 32,
+              background: 'linear-gradient(180deg, rgba(0,246,255,0.1) 0%, transparent 100%)',
+              animation: 'system-wipe-trail 360ms 180ms ease-in-out forwards',
+              opacity: 0,
             }} />
           </>
         )}

@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react'
 
-// ── Spritesheet: 1536×1024px — 7 cols (frames) × 10 rows (items) ─────────────
-// Frames: 0=INICIO · 1-4=ESCANEANDO · 5=COMPLETADO · 6=TRANSICIÓN
-const FRAME_W = 168
-const FRAME_H = 124
-const START_X = 236
-const START_Y = 118
-const GAP_X   = 19
-const GAP_Y   = 11
-const COLS    = 7
-const SCALE   = 2   // render at 2× native for crisp pixel art
+// ── Spritesheet: 1536×1024 — 7 cols (frames) × 10 rows (items) ───────────────
+const FRAME_W   = 150
+const FRAME_H   = 112
+const START_X   = 225
+const START_Y   = 84
+const GAP_X     = 18
+const GAP_Y     = 20
+const SCALE     = 2
 
-// ms per frame: INICIO · SCAN×4 · COMPLETADO · TRANSICIÓN
-const DURATIONS = [300, 90, 90, 90, 120, 450, 120]
+// Per-frame durations (ms) — not a fixed interval
+const FRAME_SEQ = [
+  { duration: 280 },  // 0 INICIO
+  { duration: 90  },  // 1 SCAN_1
+  { duration: 90  },  // 2 SCAN_2
+  { duration: 90  },  // 3 SCAN_3
+  { duration: 110 },  // 4 SCAN_4
+  { duration: 420 },  // 5 COMPLETADO
+  { duration: 120 },  // 6 TRANSICIÓN
+]
+const OBJECT_HOLD = 150   // ms between transition and next object
 
 const ITEMS = [
   { name: 'Botella de Plástico', cat: 'plástico'    },
@@ -48,11 +55,11 @@ interface Props { jobId: string; debug?: boolean }
 
 export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   const [ready,  setReady]  = useState(false)
-  const [item,   setItem]   = useState(0)       // 0..9
-  const [frame,  setFrame]  = useState(0)       // 0..6
+  const [item,   setItem]   = useState(0)
+  const [frame,  setFrame]  = useState(0)
   const [frozen, setFrozen] = useState(false)
 
-  // Debug overrides (initialised from constants)
+  // Debug overrides
   const [dfw, setDfw] = useState(FRAME_W)
   const [dfh, setDfh] = useState(FRAME_H)
   const [dsx, setDsx] = useState(START_X)
@@ -76,28 +83,27 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
     img.src = SPRITE_SRC
   }, [])
 
-  // Frame state machine
+  // Frame state machine with per-frame duration + object hold
   useEffect(() => {
     if (!ready || frozen) return
+    const dur = (FRAME_SEQ[frame]?.duration ?? 120) + (frame === FRAME_SEQ.length - 1 ? OBJECT_HOLD : 0)
     const id = setTimeout(() => {
-      if (frame < COLS - 1) {
+      if (frame < FRAME_SEQ.length - 1) {
         setFrame(f => f + 1)
       } else {
         setItem(i => (i + 1) % ITEMS.length)
         setFrame(0)
       }
-    }, DURATIONS[frame] ?? 120)
+    }, dur)
     return () => clearTimeout(id)
   }, [frame, item, ready, frozen])
+
+  const bgX = sx + frame * (fw + gx)
+  const bgY = sy + item  * (fh + gy)
 
   const isScanning   = frame >= 1 && frame <= 4
   const isComplete   = frame === 5
   const isTransition = frame === 6
-
-  // Frame 6 (TRANSICIÓN) has wider horizontal glow — give it extra width
-  const effectiveFw = isTransition ? fw + 12 : fw
-  const bgX = sx + frame * (fw + gx)
-  const bgY = sy + item  * (fh + gy)
 
   if (!ready) {
     return (
@@ -112,31 +118,52 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   return (
     <div className="flex flex-col items-center gap-3 py-5 select-none">
 
-      {/* ── Viewport — clips the 2× scaled sprite ────────────────── */}
-      <div className="relative overflow-hidden"
-        style={{ width: dw, height: dh }}>
+      {/* ── Viewport ─────────────────────────────────────────────── */}
+      <div
+        style={{
+          position: 'relative',
+          width: dw,
+          height: dh,
+          overflow: 'hidden',
+          imageRendering: 'pixelated',
+        }}
+      >
+        {/* Sprite — scale(2) + float in one transform via animation */}
+        <div
+          style={{
+            position: 'absolute',
+            width: fw,
+            height: fh,
+            backgroundImage: `url(${SPRITE_SRC})`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: `-${bgX}px -${bgY}px`,
+            imageRendering: 'pixelated',
+            transformOrigin: 'top left',
+            animation: frozen ? undefined : 'float-sprite 2.8s ease-in-out infinite',
+            filter: isTransition ? 'brightness(1.3) saturate(1.15)' : 'none',
+            opacity: isTransition ? 0.85 : 1,
+            transition: 'filter 0.06s, opacity 0.06s',
+          }}
+        />
 
-        {/* Float wrapper */}
-        <div style={{ width: dw, height: dh, animation: frozen ? undefined : 'float-obj 2s ease-in-out infinite' }}>
-          {/* Sprite at native size, scaled 2× from top-left */}
+        {/* CSS scan line — only during ESCANEANDO frames */}
+        {isScanning && (
           <div
             style={{
-              width:  effectiveFw,
-              height: fh,
-              backgroundImage: `url(${SPRITE_SRC})`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: `-${bgX}px -${bgY}px`,
-              imageRendering: 'pixelated',
-              transform: `scale(${SCALE})`,
-              transformOrigin: 'top left',
-              filter: isTransition ? 'brightness(1.35) saturate(1.2)' : 'none',
-              opacity: isTransition ? 0.84 : 1,
-              transition: 'filter 0.06s, opacity 0.06s',
+              position: 'absolute',
+              left: 18,
+              right: 18,
+              height: 3,
+              background: '#00f6ff',
+              filter: 'blur(1px)',
+              opacity: 0.9,
+              boxShadow: '0 0 6px #00f6ff, 0 0 14px #00f6ff, 0 0 28px rgba(0,246,255,0.5)',
+              animation: 'scan-move 720ms linear infinite, scan-pulse 180ms ease-in-out infinite alternate',
             }}
           />
-        </div>
+        )}
 
-        {/* Completed green glow */}
+        {/* Completed glow */}
         {isComplete && (
           <div className="absolute inset-0 pointer-events-none" style={{
             background: 'radial-gradient(ellipse at center, rgba(74,222,128,0.16) 0%, transparent 68%)',
@@ -147,7 +174,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
         {/* Transition flash */}
         {isTransition && (
           <div className="absolute inset-0 pointer-events-none"
-            style={{ background: 'rgba(0,246,255,0.08)', mixBlendMode: 'screen' }} />
+            style={{ background: 'rgba(0,246,255,0.07)', mixBlendMode: 'screen' }} />
         )}
 
         {/* Debug crop border */}

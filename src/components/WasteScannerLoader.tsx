@@ -37,10 +37,10 @@ const FRAME_Y = [
 // Con 84px el crop queda dentro de cada row sin bleeding ni divisor visible.
 const FRAME_W = 160
 const FRAME_H = 93
-const SCALE   = 0.82  // viewport: 131×76px
+const SCALE   = 0.72  // viewport: 115×67px
 
-const VIEWPORT_W = Math.round(FRAME_W * SCALE)  // 131
-const VIEWPORT_H = Math.round(FRAME_H * SCALE)  // 76
+const VIEWPORT_W = Math.round(FRAME_W * SCALE)  // 115
+const VIEWPORT_H = Math.round(FRAME_H * SCALE)  // 67
 
 // Per-item X corrections (medido con debug calibrator)
 // Tetra pak: ROW_X_FIX previo era -4, usuario midió gdx=+8 → net = +4
@@ -134,7 +134,8 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   return (
     <div className="flex flex-col items-center gap-3 py-5 select-none">
 
-      {/* ── Viewport ─────────────────────────────────────────────── */}
+      {/* ── Viewport + padding de centrado ──────────────────────── */}
+      <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div
         style={{
           position: 'relative',
@@ -216,6 +217,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             style={{ border: '1px dashed rgba(255,50,50,0.7)', zIndex: 20 }} />
         )}
       </div>
+      </div>{/* fin wrapper padding */}
 
       {/* ── Labels ───────────────────────────────────────────────── */}
       <p className="text-xs font-mono tracking-widest uppercase transition-colors duration-200"

@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 
 // ── Spritesheet: 1536×1024px — 7 cols (frames) × 10 rows (items) ─────────────
 // Frames: 0=INICIO · 1-4=ESCANEANDO · 5=COMPLETADO · 6=TRANSICIÓN
-const FRAME_W = 145
-const FRAME_H = 110
-const START_X = 220
-const START_Y = 88
-const GAP_X   = 34
-const GAP_Y   = 25
+const FRAME_W = 168
+const FRAME_H = 124
+const START_X = 236
+const START_Y = 118
+const GAP_X   = 19
+const GAP_Y   = 11
 const COLS    = 7
 const SCALE   = 2   // render at 2× native for crisp pixel art
 
@@ -90,12 +90,14 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
     return () => clearTimeout(id)
   }, [frame, item, ready, frozen])
 
-  const bgX = sx + frame * (fw + gx)
-  const bgY = sy + item  * (fh + gy)
-
   const isScanning   = frame >= 1 && frame <= 4
   const isComplete   = frame === 5
   const isTransition = frame === 6
+
+  // Frame 6 (TRANSICIÓN) has wider horizontal glow — give it extra width
+  const effectiveFw = isTransition ? fw + 12 : fw
+  const bgX = sx + frame * (fw + gx)
+  const bgY = sy + item  * (fh + gy)
 
   if (!ready) {
     return (
@@ -119,7 +121,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           {/* Sprite at native size, scaled 2× from top-left */}
           <div
             style={{
-              width:  fw,
+              width:  effectiveFw,
               height: fh,
               backgroundImage: `url(${SPRITE_SRC})`,
               backgroundRepeat: 'no-repeat',

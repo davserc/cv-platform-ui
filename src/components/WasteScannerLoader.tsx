@@ -224,16 +224,18 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
         style={{ color: isComplete ? '#4ade80' : '#06b6d4' }}>
         {isComplete ? '✓ ' : ''}{ITEMS[item].name}
       </p>
-      {isComplete && (
-        <p className="text-[10px] font-mono tracking-wide" style={{ color: '#4ade8099' }}>
-          {ITEMS[item].cat} detectado
-        </p>
-      )}
-      {isScanning && (
-        <p className="text-[10px] font-mono text-gray-600 tracking-wide">
-          escaneando<span className="animate-pulse">…</span>
-        </p>
-      )}
+      <div style={{ height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {isComplete && (
+          <p className="text-[10px] font-mono tracking-wide" style={{ color: '#4ade8099' }}>
+            {ITEMS[item].cat} detectado
+          </p>
+        )}
+        {isScanning && (
+          <p className="text-[10px] font-mono text-gray-600 tracking-wide">
+            escaneando<span className="animate-pulse">…</span>
+          </p>
+        )}
+      </div>
       <p className="text-[9px] font-mono text-gray-800">{jobId.slice(0, 8)}</p>
 
       {/* ── Debug panel ──────────────────────────────────────────── */}

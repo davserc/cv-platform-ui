@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 
 // ── Spritesheet layout ────────────────────────────────────────────────────────
-// public/sprites/waste-scanner.png — 7 cols × 10 rows
+// public/sprites/waste-scanner.png — 1536×1024px — 7 cols × 10 rows
+// Each source frame: 1536/7 ≈ 219px wide × 1024/10 = 102px tall (landscape 2.15:1)
 // Frames: 0=INICIO · 1-4=SCAN · 5=COMPLETADO · 6=TRANSICIÓN
-const COLS    = 7
-const ROWS    = 10
-const DISPLAY = 200   // rendered px per frame (square)
+const COLS      = 7
+const ROWS      = 10
+const DISPLAY_W = 300                       // rendered width per frame
+const DISPLAY_H = Math.round(DISPLAY_W * (1024 / 10) / (1536 / 7))  // ≈ 140px
 
 // State-machine timings — NOT linear. Gives "real software" feel.
 //  INICIO  SCAN×4         COMPLETADO  TRANSICIÓN
@@ -66,11 +68,11 @@ export default function WasteScannerLoader({ jobId }: Props) {
   const isCompleted  = frame === 5
   const isTransition = frame === 6
 
-  // Sprite position in the spritesheet
-  const bgX = -(frame * DISPLAY)
-  const bgY = -(item  * DISPLAY)
-  const bgW =  DISPLAY * COLS
-  const bgH =  DISPLAY * ROWS
+  // Sprite position — X and Y scaled independently to preserve exact frame crop
+  const bgX = -(frame * DISPLAY_W)
+  const bgY = -(item  * DISPLAY_H)
+  const bgW =  DISPLAY_W * COLS
+  const bgH =  DISPLAY_H * ROWS
 
   // Per-frame transform: rotation during scan + glitch scale during transition
   const rotation = isScanning ? (SCAN_ROT[frame - 1] ?? 0) : 0
@@ -98,14 +100,14 @@ export default function WasteScannerLoader({ jobId }: Props) {
       {/* ── Scanner viewport ─────────────────────────────────────── */}
       <div
         className="relative overflow-hidden"
-        style={{ width: DISPLAY, height: DISPLAY }}
+        style={{ width: DISPLAY_W, height: DISPLAY_H }}
       >
         {/* Float wrapper — hologram platform feel */}
-        <div style={{ width: DISPLAY, height: DISPLAY, animation: 'float-obj 2s ease-in-out infinite' }}>
+        <div style={{ width: DISPLAY_W, height: DISPLAY_H, animation: 'float-obj 2s ease-in-out infinite' }}>
           <div
             style={{
-              width: DISPLAY,
-              height: DISPLAY,
+              width: DISPLAY_W,
+              height: DISPLAY_H,
               backgroundImage: `url(${SPRITE_SRC})`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: `${bgX}px ${bgY}px`,

@@ -1,44 +1,50 @@
 import { useEffect, useState } from 'react'
 
-// ── Spritesheet — exact pixel offsets, tight crop ─────────────────────────────
-const FRAME_X = [248, 470, 692, 914, 1136, 1358, 1460]   // 7 columnas
+// ── Spritesheet structure (1536×1024) ─────────────────────────────────────────
+//
+//  Left labels area: ~175px
+//  7 columns × ~222px wide (TRANSICIÓN col is narrower, ~118px)
+//  Top header:        ~85px
+//  10 rows  × ~88px tall
+//  *** VISUAL DIVIDER between row 4 (cardboard) and row 5 (bag): +32px ***
+//
+//  This divider is the root cause of vertical drift in all previous iterations.
+//  Rows 0-4 and rows 5-9 are two independent sections; uniform spacing fails.
+//
+// ── Column X — left edge of safe crop zone per frame ─────────────────────────
+const FRAME_X = [224, 446, 668, 890, 1112, 1334, 1452]
+//               ini  sc1  sc2  sc3  sc4   comp  trans
+//               |←—— 222px ——→|×5         |118px|
 
-// Y medido con crop tight — no spacing matemático, el PNG no es uniforme
+// ── Row Y — top edge of safe crop zone per item ──────────────────────────────
+// Section A (rows 0-4): base=96, step=88
+// Section B (rows 5-9): base=96 + 4×88 + 32(divider) + 88 = 568, step=88
 const FRAME_Y = [
-  112,  // 01 bottle
-  222,  // 02 can
-  333,  // 03 wrapper
-  445,  // 04 cup
-  557,  // 05 cardboard
-  669,  // 06 bag
-  781,  // 07 glass
-  893,  // 08 metal
- 1005,  // 09 paper
- 1117,  // 10 tetra
+   96,  // 01 bottle
+  184,  // 02 can       (+88)
+  272,  // 03 wrapper   (+88)
+  360,  // 04 cup       (+88)
+  448,  // 05 cardboard (+88)
+  568,  // 06 bag       (+88 +32 DIVIDER)
+  656,  // 07 glass     (+88)
+  744,  // 08 metal     (+88)
+  832,  // 09 paper     (+88)
+  920,  // 10 tetra     (+88)
 ]
 
-const FRAME_W = 118   // crop width  a 1× (tight)
-const FRAME_H = 68    // crop height a 1× (corto — elimina pedestal y glow extra)
-const SCALE   = 1.22  // → viewport 144 × 83 px
+// ── Safe crop size ────────────────────────────────────────────────────────────
+// Each cell is ~222×88px. Safe crop trims borders/pedestal/label bleed.
+const FRAME_W = 160   // 222 - 2×31px margin = 160
+const FRAME_H = 78    // 88  - 2×5px  margin = 78
+const SCALE   = 1.05  // viewport: 168×82px (premium loading widget size)
 
-const VIEWPORT_W = Math.round(FRAME_W * SCALE)   // 144
-const VIEWPORT_H = Math.round(FRAME_H * SCALE)   // 83
+const VIEWPORT_W = Math.round(FRAME_W * SCALE)  // 168
+const VIEWPORT_H = Math.round(FRAME_H * SCALE)  // 82
 
-// Correcciones per-frame (atlas irregular en X)
-const FRAME_OFFSET_FIX = [
-  { x:  0 },  // inicio
-  { x: -2 },  // scan1
-  { x: -1 },  // scan2
-  { x: -1 },  // scan3
-  { x: -2 },  // scan4
-  { x: -4 },  // completed
-  { x: -8 },  // transition
-]
-
-// Compensación horizontal por fila — drift acumulativo en filas bajas
+// Per-row horizontal drift fix (lower rows shift slightly left in the PNG)
 const ROW_X_FIX = [0, 0, -1, -1, -2, -2, -3, -3, -4, -4]
 
-// ── Secuencia: scan loop ×2, ritmo de scanner industrial ─────────────────────
+// ── Frame sequence ────────────────────────────────────────────────────────────
 const FRAME_SEQ = [
   { frame: 0, duration: 220 },
   { frame: 1, duration: 75  },
@@ -68,7 +74,6 @@ const ITEMS = [
 ]
 
 const SPRITE_SRC = '/sprites/waste-scanner.png'
-
 const GLOW = 'drop-shadow(0 0 4px rgba(0,246,255,.15)) drop-shadow(0 0 10px rgba(0,246,255,.12))'
 
 interface Props { jobId: string; debug?: boolean }
@@ -79,7 +84,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   const [step,   setStep]   = useState(0)
   const [frozen, setFrozen] = useState(false)
 
-  // Debug: ajuste global de offset
+  // Debug: ajuste global de offset (no modifica W/H — eso rompería el crop)
   const [ddx, setDdx] = useState(0)
   const [ddy, setDdy] = useState(0)
 
@@ -106,9 +111,8 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   }, [step, item, ready, frozen])
 
   const spriteFrame = FRAME_SEQ[step].frame
-  const fix = FRAME_OFFSET_FIX[spriteFrame]
-  const bgX = FRAME_X[spriteFrame] + fix.x + ROW_X_FIX[item] + (debug ? ddx : 0)
-  const bgY = FRAME_Y[item]                                    + (debug ? ddy : 0)
+  const bgX = FRAME_X[spriteFrame] + ROW_X_FIX[item] + (debug ? ddx : 0)
+  const bgY = FRAME_Y[item]                           + (debug ? ddy : 0)
 
   const isScanning   = spriteFrame >= 1 && spriteFrame <= 4
   const isComplete   = spriteFrame === 5
@@ -138,7 +142,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           opacity: 0.92,
         }}
       >
-        {/* Sprite: tight crop + scale interno */}
+        {/* Sprite: safe crop + scale interno */}
         <div
           style={{
             position: 'absolute',
@@ -217,8 +221,8 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
 
       {/* ── Debug panel ──────────────────────────────────────────── */}
       {debug && (
-        <div className="mt-2 p-3 bg-gray-900 border border-gray-700 rounded space-y-1.5 w-60">
-          <div className="flex items-center justify-between mb-2">
+        <div className="mt-2 p-3 bg-gray-900 border border-gray-700 rounded space-y-2 w-64">
+          <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono text-yellow-400">🔧 calibrador</span>
             <button onClick={() => setFrozen(f => !f)}
               className="text-[9px] font-mono border border-gray-700 rounded px-1.5 py-0.5 text-gray-400 hover:text-white">
@@ -226,25 +230,29 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             </button>
           </div>
           <label className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
-            <span className="w-14 text-right">offset X</span>
-            <input type="range" min={-30} max={30} value={ddx}
+            <span className="w-16 text-right">global X</span>
+            <input type="range" min={-40} max={40} value={ddx}
               onChange={e => setDdx(Number(e.target.value))}
               className="w-28 accent-cyan-500" />
             <span className="w-8 text-cyan-400">{ddx > 0 ? `+${ddx}` : ddx}</span>
           </label>
           <label className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
-            <span className="w-14 text-right">offset Y</span>
-            <input type="range" min={-30} max={30} value={ddy}
+            <span className="w-16 text-right">global Y</span>
+            <input type="range" min={-40} max={40} value={ddy}
               onChange={e => setDdy(Number(e.target.value))}
               className="w-28 accent-cyan-500" />
             <span className="w-8 text-cyan-400">{ddy > 0 ? `+${ddy}` : ddy}</span>
           </label>
-          <div className="pt-1 text-[9px] font-mono text-gray-600">
-            step={step} frame={spriteFrame} item={item}
-            · fix=({fix.x}) row_x={ROW_X_FIX[item]} · bg=({bgX},{bgY})
+          <div className="pt-1 border-t border-gray-800 text-[9px] font-mono text-gray-600 space-y-0.5">
+            <div>frame={spriteFrame} step={step} item={item}/{ITEMS[item].name}</div>
+            <div>bgX={bgX} ({FRAME_X[spriteFrame]}+{ROW_X_FIX[item]}+{ddx})</div>
+            <div>bgY={bgY} ({FRAME_Y[item]}+{ddy})</div>
+            <div className="text-amber-600">
+              {item < 5 ? '▲ sección A (sin divisor)' : '▼ sección B (post-divisor +32px)'}
+            </div>
           </div>
-          <pre className="text-[9px] font-mono text-cyan-700 select-all leading-relaxed">{
-`FRAME_X[${spriteFrame}]=${FRAME_X[spriteFrame]}\nFRAME_Y[${item}]=${FRAME_Y[item]}\ndx=${ddx} dy=${ddy}`
+          <pre className="text-[9px] font-mono text-cyan-700 select-all">{
+`FRAME_X[${spriteFrame}]=${FRAME_X[spriteFrame]}\nFRAME_Y[${item}]=${FRAME_Y[item]}\ngdx=${ddx} gdy=${ddy}`
           }</pre>
         </div>
       )}

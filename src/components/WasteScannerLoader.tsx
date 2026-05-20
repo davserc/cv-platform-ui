@@ -51,7 +51,7 @@ const ITEM_X_FIX = [0, 0, -1, -1, -2, -2, -3, -3, -4, 4]
 // la genera SOLO el CSS scan line. Sin ciclar frames → sin efecto carrusel.
 const FRAME_SEQ = [
   { frame: 0, duration: 250  },  // 0: INICIO    — objeto aparece
-  { frame: 0, duration: 1400 },  // 1: SCANNING  — frame fijo, CSS scan activo
+  { frame: 0, duration: 2200 },  // 1: SCANNING  — frame fijo, CSS scan activo
   { frame: 5, duration: 380  },  // 2: COMPLETADO — verde + checkmark
   { frame: 6, duration: 100  },  // 3: TRANSICIÓN — flash oscuro
 ]
@@ -175,7 +175,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
               background: 'linear-gradient(90deg, transparent, #00f6ff 20%, #00f6ff 80%, transparent)',
               filter: 'blur(0.8px)',
               boxShadow: '0 0 6px #00f6ff, 0 0 14px #00f6ff, 0 0 28px rgba(0,246,255,0.4)',
-              animation: 'scan-move 750ms linear infinite',
+              animation: 'scan-move 1100ms linear infinite',
             }}
           />
         )}

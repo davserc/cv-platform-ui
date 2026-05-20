@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react'
 
-// ── Spritesheet config ────────────────────────────────────────────────────────
+// ── Spritesheet layout (fixed, matches the design) ───────────────────────────
 // Place the spritesheet at: public/sprites/waste-scanner.png
-// Layout: 7 columns (frames) × 10 rows (items)
-const FRAME_W = 128   // px width of each frame in the PNG
-const FRAME_H = 128   // px height of each frame in the PNG
-const DISPLAY  = 200  // rendered size in the browser (px)
+// The component auto-detects frame size from the actual PNG dimensions.
+const COLS  = 7   // frames per item: INICIO · ESC 1-4 · COMPLETADO · TRANSICIÓN
+const ROWS  = 10  // items
+const DISPLAY = 200  // rendered sprite size (px)
 
-const COLS = 7
-const scale = DISPLAY / FRAME_W
-
-// ms each frame is shown
+// ms each frame is held
 const DURATIONS = [350, 110, 110, 110, 110, 580, 220]
 
 const ITEMS = [
@@ -36,13 +33,33 @@ const FRAME_LABELS = [
   '',
 ]
 
+const SPRITE_SRC = '/sprites/waste-scanner.png'
+
 interface Props { jobId: string }
 
 export default function WasteScannerLoader({ jobId }: Props) {
-  const [item, setItem] = useState(0)
+  const [frameW, setFrameW] = useState(0)
+  const [frameH, setFrameH] = useState(0)
+  const [ready, setReady]   = useState(false)
+
+  const [item,  setItem]  = useState(0)
   const [frame, setFrame] = useState(0)
 
+  // Auto-detect frame dimensions from the real PNG
   useEffect(() => {
+    const img = new Image()
+    img.onload = () => {
+      setFrameW(Math.floor(img.naturalWidth  / COLS))
+      setFrameH(Math.floor(img.naturalHeight / ROWS))
+      setReady(true)
+    }
+    img.onerror = () => setReady(false)
+    img.src = SPRITE_SRC
+  }, [])
+
+  // Animate frame by frame
+  useEffect(() => {
+    if (!ready) return
     const id = setTimeout(() => {
       if (frame < COLS - 1) {
         setFrame(f => f + 1)
@@ -52,27 +69,42 @@ export default function WasteScannerLoader({ jobId }: Props) {
       }
     }, DURATIONS[frame] ?? 120)
     return () => clearTimeout(id)
-  }, [frame, item])
+  }, [frame, item, ready])
 
-  const bgX = -(frame * FRAME_W * scale)
-  const bgY  = -(item  * FRAME_H * scale)
-  const bgW  = FRAME_W * COLS        * scale
-  const bgH  = FRAME_H * ITEMS.length * scale
+  const isScanning  = frame >= 1 && frame <= 4
+  const isCompleted = frame === 5
+  const label       = FRAME_LABELS[frame] ?? ''
 
-  const isScanning   = frame >= 1 && frame <= 4
-  const isCompleted  = frame === 5
-  const label        = FRAME_LABELS[frame] ?? ''
+  if (!ready) {
+    // Fallback while PNG loads (or if missing)
+    return (
+      <div className="flex flex-col items-center gap-3 py-8 select-none">
+        <div
+          className="w-12 h-12 rounded-full border-2 border-cyan-600 border-t-transparent animate-spin"
+          style={{ borderTopColor: 'transparent' }}
+        />
+        <p className="text-xs font-mono text-gray-600">Cargando escáner…</p>
+        <p className="text-[9px] font-mono text-gray-800">{jobId.slice(0, 8)}</p>
+      </div>
+    )
+  }
+
+  const scale = DISPLAY / frameW
+  const bgX = -(frame * frameW * scale)
+  const bgY = -(item  * frameH * scale)
+  const bgW =  frameW * COLS * scale
+  const bgH =  frameH * ROWS * scale
 
   return (
     <div className="flex flex-col items-center gap-3 py-5 select-none">
 
-      {/* Scanner frame */}
+      {/* Sprite */}
       <div className="relative" style={{ width: DISPLAY, height: DISPLAY }}>
         <div
           style={{
             width: DISPLAY,
             height: DISPLAY,
-            backgroundImage: 'url(/sprites/waste-scanner.png)',
+            backgroundImage: `url(${SPRITE_SRC})`,
             backgroundRepeat: 'no-repeat',
             backgroundPosition: `${bgX}px ${bgY}px`,
             backgroundSize: `${bgW}px ${bgH}px`,
@@ -80,13 +112,13 @@ export default function WasteScannerLoader({ jobId }: Props) {
           }}
         />
 
-        {/* Scan line overlay while scanning */}
+        {/* Scan-line overlay during ESCANEANDO frames */}
         {isScanning && (
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(6,182,212,0.06) 3px, rgba(6,182,212,0.06) 4px)',
+                'repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(6,182,212,0.07) 3px,rgba(6,182,212,0.07) 4px)',
               animation: 'scan-line 1.2s linear infinite',
             }}
           />
@@ -101,18 +133,15 @@ export default function WasteScannerLoader({ jobId }: Props) {
         {isCompleted ? '✓ ' : ''}{ITEMS[item]}
       </p>
 
-      {/* Status label */}
+      {/* Frame status */}
       {label && (
         <p className="text-[10px] font-mono text-gray-600 tracking-wide">
-          {label}
-          {isScanning && <span className="animate-pulse">…</span>}
+          {label}{isScanning && <span className="animate-pulse">…</span>}
         </p>
       )}
 
       {/* Job ID */}
-      <p className="text-[9px] font-mono text-gray-800">
-        {jobId.slice(0, 8)}
-      </p>
+      <p className="text-[9px] font-mono text-gray-800">{jobId.slice(0, 8)}</p>
     </div>
   )
 }

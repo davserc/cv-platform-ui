@@ -7,8 +7,8 @@ const COLS  = 7   // frames per item: INICIO · ESC 1-4 · COMPLETADO · TRANSIC
 const ROWS  = 10  // items
 const DISPLAY = 200  // rendered sprite size (px)
 
-// ms each frame is held
-const DURATIONS = [350, 110, 110, 110, 110, 580, 220]
+// ms each frame is held — INICIO · ESC×4 · COMPLETADO · TRANSICIÓN
+const DURATIONS = [500, 200, 200, 200, 200, 900, 350]
 
 const ITEMS = [
   'Botella de Plástico',
@@ -38,21 +38,14 @@ const SPRITE_SRC = '/sprites/waste-scanner.png'
 interface Props { jobId: string }
 
 export default function WasteScannerLoader({ jobId }: Props) {
-  const [frameW, setFrameW] = useState(0)
-  const [frameH, setFrameH] = useState(0)
-  const [ready, setReady]   = useState(false)
-
+  const [ready, setReady] = useState(false)
   const [item,  setItem]  = useState(0)
   const [frame, setFrame] = useState(0)
 
-  // Auto-detect frame dimensions from the real PNG
+  // Verify the PNG exists before starting the animation
   useEffect(() => {
     const img = new Image()
-    img.onload = () => {
-      setFrameW(Math.floor(img.naturalWidth  / COLS))
-      setFrameH(Math.floor(img.naturalHeight / ROWS))
-      setReady(true)
-    }
+    img.onload  = () => setReady(true)
     img.onerror = () => setReady(false)
     img.src = SPRITE_SRC
   }, [])
@@ -89,17 +82,18 @@ export default function WasteScannerLoader({ jobId }: Props) {
     )
   }
 
-  const scale = DISPLAY / frameW
-  const bgX = -(frame * frameW * scale)
-  const bgY = -(item  * frameH * scale)
-  const bgW =  frameW * COLS * scale
-  const bgH =  frameH * ROWS * scale
+  // Scale X and Y independently so each frame fills DISPLAY×DISPLAY exactly,
+  // regardless of whether the source frames are square or not.
+  const bgX = -(frame * DISPLAY)
+  const bgY = -(item  * DISPLAY)
+  const bgW =  DISPLAY * COLS
+  const bgH =  DISPLAY * ROWS
 
   return (
     <div className="flex flex-col items-center gap-3 py-5 select-none">
 
-      {/* Sprite */}
-      <div className="relative" style={{ width: DISPLAY, height: DISPLAY }}>
+      {/* overflow:hidden clips the background to exactly one frame */}
+      <div className="relative overflow-hidden" style={{ width: DISPLAY, height: DISPLAY }}>
         <div
           style={{
             width: DISPLAY,

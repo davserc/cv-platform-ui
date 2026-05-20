@@ -1,14 +1,28 @@
 import { useEffect, useState } from 'react'
 
-// ── Spritesheet — exact pixel offsets, no arithmetic formula ──────────────────
-const FRAME_X = [220, 442, 664, 886, 1108, 1328, 1450]   // 7 columnas
-const FRAME_Y = [84, 198, 310, 422, 534, 646, 758, 870, 982, 1094]  // 10 filas
+// ── Spritesheet — exact pixel offsets per cell ────────────────────────────────
+const FRAME_X = [246, 468, 690, 912, 1134, 1355, 1456]   // 7 columnas
+const FRAME_Y = [96, 208, 320, 432, 544, 656, 768, 880, 992, 1104]  // 10 filas
 
-const FRAME_W = 118   // ancho del viewport a 1×
-const FRAME_H = 96    // alto  del viewport a 1×
-const SCALE   = 1.6   // display: ~190 × 154 px
+const FRAME_W = 102   // safe crop width  a 1×
+const FRAME_H = 84    // safe crop height a 1×
+const SCALE   = 1.55  // viewport: ~158 × 130 px
 
-// ── Secuencia: scan loop ×2 para sensación "IA analizando" ───────────────────
+const VIEWPORT_W = Math.round(FRAME_W * SCALE)
+const VIEWPORT_H = Math.round(FRAME_H * SCALE)
+
+// Correcciones por frame — el atlas no es perfectamente uniforme
+const FRAME_OFFSET_FIX = [
+  { x:  0, y: 0 },  // inicio
+  { x: -2, y: 0 },  // scan1
+  { x: -1, y: 0 },  // scan2
+  { x: -1, y: 0 },  // scan3
+  { x: -2, y: 0 },  // scan4
+  { x: -4, y: 0 },  // completed
+  { x: -8, y: 0 },  // transition
+]
+
+// ── Secuencia: scan loop ×2 ───────────────────────────────────────────────────
 const FRAME_SEQ = [
   { frame: 0, duration: 220 },
   { frame: 1, duration: 55  },
@@ -47,14 +61,9 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   const [step,   setStep]   = useState(0)
   const [frozen, setFrozen] = useState(false)
 
-  // Debug: solo ancho/alto del viewport (los offsets son exactos, no editables)
-  const [dfw, setDfw] = useState(FRAME_W)
-  const [dfh, setDfh] = useState(FRAME_H)
-
-  const fw = debug ? dfw : FRAME_W
-  const fh = debug ? dfh : FRAME_H
-  const dw = Math.round(fw * SCALE)
-  const dh = Math.round(fh * SCALE)
+  // Debug: ajuste global de offset sobre los valores exactos
+  const [ddx, setDdx] = useState(0)
+  const [ddy, setDdy] = useState(0)
 
   useEffect(() => {
     const img = new Image()
@@ -79,8 +88,9 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   }, [step, item, ready, frozen])
 
   const spriteFrame = FRAME_SEQ[step].frame
-  const bgX = FRAME_X[spriteFrame]
-  const bgY = FRAME_Y[item]
+  const fix = FRAME_OFFSET_FIX[spriteFrame]
+  const bgX = FRAME_X[spriteFrame] + fix.x + (debug ? ddx : 0)
+  const bgY = FRAME_Y[item]         + fix.y + (debug ? ddy : 0)
 
   const isScanning   = spriteFrame >= 1 && spriteFrame <= 4
   const isComplete   = spriteFrame === 5
@@ -103,28 +113,28 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
       <div
         style={{
           position: 'relative',
-          width: dw,
-          height: dh,
+          width: VIEWPORT_W,
+          height: VIEWPORT_H,
           overflow: 'hidden',
           imageRendering: 'pixelated',
         }}
       >
-        {/* Sprite: lookup directo sin fórmula */}
+        {/* Sprite: safe crop + scale interno */}
         <div
           style={{
             position: 'absolute',
-            width: fw,
-            height: fh,
+            width: FRAME_W,
+            height: FRAME_H,
             backgroundImage: `url(${SPRITE_SRC})`,
             backgroundRepeat: 'no-repeat',
             backgroundPosition: `-${bgX}px -${bgY}px`,
             imageRendering: 'pixelated',
             transformOrigin: 'top left',
-            willChange: 'background-position',
+            willChange: 'background-position, transform',
             animation: frozen ? undefined
               : isScanning
                 ? 'scan-wobble 400ms ease-in-out infinite alternate'
-                : 'float-sprite 2.8s ease-in-out infinite',
+                : 'idle-float 3s ease-in-out infinite',
             filter: isTransition ? 'brightness(1.3) saturate(1.15)' : 'none',
             opacity: isTransition ? 0.85 : 1,
             transition: 'filter 0.06s, opacity 0.06s',
@@ -195,24 +205,25 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             </button>
           </div>
           <label className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
-            <span className="w-14 text-right">FRAME_W</span>
-            <input type="range" min={50} max={250} value={dfw}
-              onChange={e => setDfw(Number(e.target.value))}
+            <span className="w-14 text-right">offset X</span>
+            <input type="range" min={-30} max={30} value={ddx}
+              onChange={e => setDdx(Number(e.target.value))}
               className="w-28 accent-cyan-500" />
-            <span className="w-8 text-cyan-400">{dfw}</span>
+            <span className="w-8 text-cyan-400">{ddx > 0 ? `+${ddx}` : ddx}</span>
           </label>
           <label className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
-            <span className="w-14 text-right">FRAME_H</span>
-            <input type="range" min={30} max={200} value={dfh}
-              onChange={e => setDfh(Number(e.target.value))}
+            <span className="w-14 text-right">offset Y</span>
+            <input type="range" min={-30} max={30} value={ddy}
+              onChange={e => setDdy(Number(e.target.value))}
               className="w-28 accent-cyan-500" />
-            <span className="w-8 text-cyan-400">{dfh}</span>
+            <span className="w-8 text-cyan-400">{ddy > 0 ? `+${ddy}` : ddy}</span>
           </label>
           <div className="pt-1 text-[9px] font-mono text-gray-600">
-            step={step} frame={spriteFrame} item={item} · bgX={bgX} bgY={bgY}
+            step={step} frame={spriteFrame} item={item}
+            · fix=({fix.x},{fix.y}) · bg=({bgX},{bgY})
           </div>
           <pre className="text-[9px] font-mono text-cyan-700 select-all leading-relaxed">{
-`FRAME_W=${dfw}\nFRAME_H=${dfh}\nSCALE=1.6`
+`FRAME_X[${spriteFrame}]=${FRAME_X[spriteFrame]}\nFRAME_Y[${item}]=${FRAME_Y[item]}\ndx=${ddx} dy=${ddy}`
           }</pre>
         </div>
       )}

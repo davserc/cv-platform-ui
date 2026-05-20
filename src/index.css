@@ -24,14 +24,15 @@
 
 
 /* WasteScannerLoader — sprite animations */
-@keyframes float-sprite {
-  0%,100% { transform: scale(1.6) translateY(0px);   }
-  50%      { transform: scale(1.6) translateY(-2px);  }
+@keyframes idle-float {
+  0%   { transform: scale(1.55) translateY(0px)  rotate(-1deg); }
+  50%  { transform: scale(1.55) translateY(-2px) rotate(1deg);  }
+  100% { transform: scale(1.55) translateY(0px)  rotate(-1deg); }
 }
 
 @keyframes scan-wobble {
-  from { transform: scale(1.6) translateY(-1px) rotate(-0.8deg); }
-  to   { transform: scale(1.6) translateY(1px)  rotate(0.8deg);  }
+  from { transform: scale(1.55) translateY(-1px) rotate(-0.8deg); }
+  to   { transform: scale(1.55) translateY(1px)  rotate(0.8deg);  }
 }
 
 @keyframes scan-move {

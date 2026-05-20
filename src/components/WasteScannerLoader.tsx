@@ -1,44 +1,44 @@
 import { useEffect, useState } from 'react'
 
-// ── Spritesheet config ────────────────────────────────────────────────────────
-// Ajustar con debug=true hasta que el recorte quede perfecto,
-// luego copiar los valores aquí.
-const FRAME_W = 250
-const FRAME_H = 320
-const START_X = 40
-const START_Y = 145
-const GAP_X   = 30
-const GAP_Y   = 85
+// ── Spritesheet: 1536×1024px — 7 cols (frames) × 10 rows (items) ─────────────
+// Frames: 0=INICIO · 1-4=ESCANEANDO · 5=COMPLETADO · 6=TRANSICIÓN
+const FRAME_W = 145
+const FRAME_H = 110
+const START_X = 220
+const START_Y = 88
+const GAP_X   = 34
+const GAP_Y   = 25
+const COLS    = 7
+const SCALE   = 2   // render at 2× native for crisp pixel art
 
-const OBJECTS = [
-  { row: 0, col: 0, name: 'Botella de Plástico', cat: 'plástico'    },
-  { row: 0, col: 1, name: 'Lata de Aluminio',    cat: 'metal'       },
-  { row: 0, col: 2, name: 'Envoltorio',           cat: 'papel/cartón'},
-  { row: 0, col: 3, name: 'Vaso Descartable',    cat: 'plástico'    },
-  { row: 0, col: 4, name: 'Cartón',               cat: 'cartón'      },
-  { row: 1, col: 0, name: 'Bolsa Plástica',       cat: 'plástico'    },
-  { row: 1, col: 1, name: 'Botella de Vidrio',   cat: 'vidrio'      },
-  { row: 1, col: 2, name: 'Lata de Metal',        cat: 'metal'       },
-  { row: 1, col: 3, name: 'Papel',                cat: 'papel'       },
-  { row: 1, col: 4, name: 'Tetra Pak',            cat: 'tetra pak'   },
-] as const
+// ms per frame: INICIO · SCAN×4 · COMPLETADO · TRANSICIÓN
+const DURATIONS = [300, 90, 90, 90, 120, 450, 120]
 
-type Phase = 'idle' | 'scanning' | 'complete' | 'transition'
-const PHASE_MS: Record<Phase, number> = { idle: 300, scanning: 900, complete: 600, transition: 180 }
+const ITEMS = [
+  { name: 'Botella de Plástico', cat: 'plástico'    },
+  { name: 'Lata de Aluminio',    cat: 'metal'       },
+  { name: 'Envoltorio',          cat: 'papel/cartón'},
+  { name: 'Vaso Descartable',   cat: 'plástico'    },
+  { name: 'Cartón',              cat: 'cartón'      },
+  { name: 'Bolsa Plástica',      cat: 'plástico'    },
+  { name: 'Botella de Vidrio',  cat: 'vidrio'      },
+  { name: 'Lata de Metal',       cat: 'metal'       },
+  { name: 'Papel',               cat: 'papel'       },
+  { name: 'Tetra Pak',           cat: 'tetra pak'   },
+]
+
 const SPRITE_SRC = '/sprites/waste-scanner.png'
 
-// ── Debug control ─────────────────────────────────────────────────────────────
-function Slider({ label, value, min, max, step = 1, onChange }: {
-  label: string; value: number; min: number; max: number; step?: number
-  onChange: (v: number) => void
+// ── Debug slider ──────────────────────────────────────────────────────────────
+function Slider({ label, value, min, max, onChange }: {
+  label: string; value: number; min: number; max: number; onChange: (v: number) => void
 }) {
   return (
     <label className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
       <span className="w-14 text-right">{label}</span>
-      <input type="range" min={min} max={max} step={step} value={value}
+      <input type="range" min={min} max={max} value={value}
         onChange={e => onChange(Number(e.target.value))}
-        className="w-28 accent-cyan-500"
-      />
+        className="w-28 accent-cyan-500" />
       <span className="w-8 text-cyan-400">{value}</span>
     </label>
   )
@@ -47,17 +47,27 @@ function Slider({ label, value, min, max, step = 1, onChange }: {
 interface Props { jobId: string; debug?: boolean }
 
 export default function WasteScannerLoader({ jobId, debug = false }: Props) {
-  const [ready, setReady] = useState(false)
-  const [idx,   setIdx]   = useState(0)
-  const [phase, setPhase] = useState<Phase>('idle')
-  const [frozen, setFrozen] = useState(false) // debug: pause cycling
+  const [ready,  setReady]  = useState(false)
+  const [item,   setItem]   = useState(0)       // 0..9
+  const [frame,  setFrame]  = useState(0)       // 0..6
+  const [frozen, setFrozen] = useState(false)
 
-  const [fw, setFw] = useState(FRAME_W)
-  const [fh, setFh] = useState(FRAME_H)
-  const [sx, setSx] = useState(START_X)
-  const [sy, setSy] = useState(START_Y)
-  const [gx, setGx] = useState(GAP_X)
-  const [gy, setGy] = useState(GAP_Y)
+  // Debug overrides (initialised from constants)
+  const [dfw, setDfw] = useState(FRAME_W)
+  const [dfh, setDfh] = useState(FRAME_H)
+  const [dsx, setDsx] = useState(START_X)
+  const [dsy, setDsy] = useState(START_Y)
+  const [dgx, setDgx] = useState(GAP_X)
+  const [dgy, setDgy] = useState(GAP_Y)
+
+  const fw = debug ? dfw : FRAME_W
+  const fh = debug ? dfh : FRAME_H
+  const sx = debug ? dsx : START_X
+  const sy = debug ? dsy : START_Y
+  const gx = debug ? dgx : GAP_X
+  const gy = debug ? dgy : GAP_Y
+  const dw = fw * SCALE
+  const dh = fh * SCALE
 
   useEffect(() => {
     const img = new Image()
@@ -66,24 +76,26 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
     img.src = SPRITE_SRC
   }, [])
 
+  // Frame state machine
   useEffect(() => {
     if (!ready || frozen) return
     const id = setTimeout(() => {
-      if (phase === 'idle')          setPhase('scanning')
-      else if (phase === 'scanning') setPhase('complete')
-      else if (phase === 'complete') setPhase('transition')
-      else { setIdx(i => (i + 1) % OBJECTS.length); setPhase('idle') }
-    }, PHASE_MS[phase])
+      if (frame < COLS - 1) {
+        setFrame(f => f + 1)
+      } else {
+        setItem(i => (i + 1) % ITEMS.length)
+        setFrame(0)
+      }
+    }, DURATIONS[frame] ?? 120)
     return () => clearTimeout(id)
-  }, [phase, idx, ready, frozen])
+  }, [frame, item, ready, frozen])
 
-  const obj = OBJECTS[idx]
-  const bgX = sx + obj.col * (fw + gx)
-  const bgY = sy + obj.row * (fh + gy)
+  const bgX = sx + frame * (fw + gx)
+  const bgY = sy + item  * (fh + gy)
 
-  const isScanning   = phase === 'scanning'
-  const isComplete   = phase === 'complete'
-  const isTransition = phase === 'transition'
+  const isScanning   = frame >= 1 && frame <= 4
+  const isComplete   = frame === 5
+  const isTransition = frame === 6
 
   if (!ready) {
     return (
@@ -98,60 +110,71 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   return (
     <div className="flex flex-col items-center gap-3 py-5 select-none">
 
-      {/* ── Scanner viewport ─────────────────────────────────── */}
-      <div className="relative overflow-hidden" style={{ width: fw, height: fh }}>
-        <div style={{ width: fw, height: fh, animation: frozen ? undefined : 'float-obj 2s ease-in-out infinite' }}>
+      {/* ── Viewport — clips the 2× scaled sprite ────────────────── */}
+      <div className="relative overflow-hidden"
+        style={{ width: dw, height: dh }}>
+
+        {/* Float wrapper */}
+        <div style={{ width: dw, height: dh, animation: frozen ? undefined : 'float-obj 2s ease-in-out infinite' }}>
+          {/* Sprite at native size, scaled 2× from top-left */}
           <div
             style={{
-              width: fw,
+              width:  fw,
               height: fh,
               backgroundImage: `url(${SPRITE_SRC})`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: `-${bgX}px -${bgY}px`,
               imageRendering: 'pixelated',
-              transform: isTransition ? 'scale(1.02)' : 'scale(1)',
-              filter: isTransition ? 'brightness(1.4) saturate(1.2)' : isScanning ? 'brightness(1.05)' : 'none',
-              opacity: isTransition ? 0.82 : 1,
-              transition: 'transform 0.07s ease-out, filter 0.06s, opacity 0.06s',
+              transform: `scale(${SCALE})`,
+              transformOrigin: 'top left',
+              filter: isTransition ? 'brightness(1.35) saturate(1.2)' : 'none',
+              opacity: isTransition ? 0.84 : 1,
+              transition: 'filter 0.06s, opacity 0.06s',
             }}
           />
         </div>
 
+        {/* CSS scan line — 700ms sweep, left/right inset */}
         {isScanning && (
-          <div className="absolute left-0 right-0 pointer-events-none" style={{
-            height: 4,
-            background: 'linear-gradient(90deg, transparent 0%, #00f6ff 40%, #00f6ff 60%, transparent 100%)',
-            filter: 'blur(1.5px)',
-            boxShadow: '0 0 10px rgba(0,246,255,0.9), 0 0 22px rgba(0,246,255,0.4)',
-            animation: 'scan-move 0.65s linear infinite',
+          <div className="absolute pointer-events-none" style={{
+            left: 12, right: 12,
+            height: 3,
+            background: '#00f6ff',
+            filter: 'blur(1px)',
+            boxShadow: '0 0 8px #00f6ff, 0 0 18px #00f6ff',
+            animation: 'scan-sweep 0.7s linear infinite',
           }} />
         )}
+
+        {/* Completed green glow */}
         {isComplete && (
           <div className="absolute inset-0 pointer-events-none" style={{
-            background: 'radial-gradient(ellipse at center, rgba(74,222,128,0.15) 0%, transparent 68%)',
+            background: 'radial-gradient(ellipse at center, rgba(74,222,128,0.16) 0%, transparent 68%)',
             animation: 'pulse-scale 0.9s ease-in-out infinite',
           }} />
         )}
+
+        {/* Transition flash */}
         {isTransition && (
           <div className="absolute inset-0 pointer-events-none"
-            style={{ background: 'rgba(0,246,255,0.09)', mixBlendMode: 'screen' }} />
+            style={{ background: 'rgba(0,246,255,0.08)', mixBlendMode: 'screen' }} />
         )}
 
-        {/* Debug grid overlay */}
+        {/* Debug crop border */}
         {debug && (
           <div className="absolute inset-0 pointer-events-none"
-            style={{ border: '1px dashed rgba(255,0,0,0.6)' }} />
+            style={{ border: '1px dashed rgba(255,50,50,0.7)' }} />
         )}
       </div>
 
-      {/* ── Labels ───────────────────────────────────────────── */}
+      {/* ── Labels ───────────────────────────────────────────────── */}
       <p className="text-xs font-mono tracking-widest uppercase transition-colors duration-200"
         style={{ color: isComplete ? '#4ade80' : '#06b6d4' }}>
-        {isComplete ? '✓ ' : ''}{obj.name}
+        {isComplete ? '✓ ' : ''}{ITEMS[item].name}
       </p>
       {isComplete && (
         <p className="text-[10px] font-mono tracking-wide" style={{ color: '#4ade8099' }}>
-          {obj.cat} detectado
+          {ITEMS[item].cat} detectado
         </p>
       )}
       {isScanning && (
@@ -161,9 +184,9 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
       )}
       <p className="text-[9px] font-mono text-gray-800">{jobId.slice(0, 8)}</p>
 
-      {/* ── Debug panel ──────────────────────────────────────── */}
+      {/* ── Debug panel ──────────────────────────────────────────── */}
       {debug && (
-        <div className="mt-2 p-3 bg-gray-900 border border-gray-700 rounded text-left space-y-1.5 w-56">
+        <div className="mt-2 p-3 bg-gray-900 border border-gray-700 rounded space-y-1.5 w-60">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-mono text-yellow-400">🔧 calibrador</span>
             <button onClick={() => setFrozen(f => !f)}
@@ -171,21 +194,17 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
               {frozen ? '▶ reanudar' : '⏸ pausar'}
             </button>
           </div>
-          <Slider label="FRAME_W" value={fw} min={50}  max={600} onChange={setFw} />
-          <Slider label="FRAME_H" value={fh} min={50}  max={600} onChange={setFh} />
-          <Slider label="START_X" value={sx} min={0}   max={400} onChange={setSx} />
-          <Slider label="START_Y" value={sy} min={0}   max={400} onChange={setSy} />
-          <Slider label="GAP_X"   value={gx} min={0}   max={200} onChange={setGx} />
-          <Slider label="GAP_Y"   value={gy} min={0}   max={300} onChange={setGy} />
-          <div className="mt-2 pt-2 border-t border-gray-800 text-[9px] font-mono text-gray-600 leading-relaxed">
-            bgX = {bgX} · bgY = {bgY}<br/>
-            obj: row={obj.row} col={obj.col}
+          <Slider label="FRAME_W" value={dfw} min={50}  max={400} onChange={setDfw} />
+          <Slider label="FRAME_H" value={dfh} min={30}  max={400} onChange={setDfh} />
+          <Slider label="START_X" value={dsx} min={0}   max={500} onChange={setDsx} />
+          <Slider label="START_Y" value={dsy} min={0}   max={500} onChange={setDsy} />
+          <Slider label="GAP_X"   value={dgx} min={0}   max={150} onChange={setDgx} />
+          <Slider label="GAP_Y"   value={dgy} min={0}   max={200} onChange={setDgy} />
+          <div className="pt-1 text-[9px] font-mono text-gray-600">
+            frame={frame} item={item} · bgX={sx + frame*(fw+gx)} bgY={sy + item*(fh+gy)}
           </div>
-          <div className="text-[9px] font-mono text-gray-500 pt-1">
-            copiar a WasteScannerLoader.tsx:
-          </div>
-          <pre className="text-[9px] font-mono text-cyan-700 leading-relaxed select-all">{
-`FRAME_W=${fw}\nFRAME_H=${fh}\nSTART_X=${sx}\nSTART_Y=${sy}\nGAP_X=${gx}\nGAP_Y=${gy}`
+          <pre className="text-[9px] font-mono text-cyan-700 select-all leading-relaxed">{
+`FRAME_W=${dfw}\nFRAME_H=${dfh}\nSTART_X=${dsx}\nSTART_Y=${dsy}\nGAP_X=${dgx}\nGAP_Y=${dgy}`
           }</pre>
         </div>
       )}

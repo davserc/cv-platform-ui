@@ -52,7 +52,7 @@ const ITEM_X_FIX = [0, 0, -1, -1, -2, -2, -3, -3, -4, 4]
 const FRAME_SEQ = [
   { frame: 0, duration: 250  },  // 0: INICIO    — objeto aparece
   { frame: 0, duration: 2200 },  // 1: SCANNING  — frame fijo, CSS scan activo
-  { frame: 5, duration: 380  },  // 2: COMPLETADO — verde + checkmark
+  { frame: 5, duration: 750  },  // 2: COMPLETADO — verde + checkmark
   { frame: 6, duration: 100  },  // 3: TRANSICIÓN — flash oscuro
 ]
 const OBJECT_HOLD = 180

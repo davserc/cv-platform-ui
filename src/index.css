@@ -24,6 +24,19 @@
 
 
 /* WasteScannerLoader — sprite animations */
+
+/* Fade-in + leve rise cuando aparece un nuevo objeto */
+@keyframes item-appear {
+  from { opacity: 0; transform: scale(1.05) translateY(4px) rotate(-0.6deg); }
+  to   { opacity: 1; transform: scale(1.05) translateY(0px) rotate(-0.6deg); }
+}
+
+/* Flash cyan que se desvanece al inicio de la transición */
+@keyframes transition-flare {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 @keyframes idle-float {
   0%   { transform: scale(1.05) translateY(0px)  rotate(-0.6deg); }
   50%  { transform: scale(1.05) translateY(-2px) rotate(0.6deg);  }

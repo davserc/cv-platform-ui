@@ -35,11 +35,11 @@ const FRAME_Y = [
 // ── Safe crop size ────────────────────────────────────────────────────────────
 // Each cell is ~222×88px. Safe crop trims borders/pedestal/label bleed.
 const FRAME_W = 160   // 222 - 2×31px margin = 160
-const FRAME_H = 78    // 88  - 2×5px  margin = 78
-const SCALE   = 1.05  // viewport: 168×82px (premium loading widget size)
+const FRAME_H = 86    // más alto para capturar objetos como botella vidrio y papel
+const SCALE   = 1.05  // viewport: 168×90px
 
 const VIEWPORT_W = Math.round(FRAME_W * SCALE)  // 168
-const VIEWPORT_H = Math.round(FRAME_H * SCALE)  // 82
+const VIEWPORT_H = Math.round(FRAME_H * SCALE)  // 90
 
 // Per-row horizontal drift fix (lower rows shift slightly left in the PNG)
 const ROW_X_FIX = [0, 0, -1, -1, -2, -2, -3, -3, -4, -4]
@@ -142,8 +142,9 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           opacity: 0.92,
         }}
       >
-        {/* Sprite: safe crop + scale interno */}
+        {/* Sprite: key={item} fuerza remount en cada cambio → item-appear se dispara */}
         <div
+          key={item}
           style={{
             position: 'absolute',
             width: FRAME_W,
@@ -154,15 +155,16 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             imageRendering: 'pixelated',
             transformOrigin: 'top left',
             willChange: 'background-position, transform',
-            animation: frozen ? undefined
+            // Durante transición: invisible → el flash del overlay oculta el swap
+            opacity: isTransition ? 0 : 1,
+            animation: frozen || isTransition ? undefined
               : isScanning
                 ? 'scan-wobble 700ms ease-in-out infinite alternate'
-                : 'idle-float 3.5s ease-in-out infinite',
-            filter: isTransition
-              ? `brightness(1.3) saturate(1.15) ${GLOW}`
-              : GLOW,
-            opacity: isTransition ? 0.85 : 1,
-            transition: 'filter 0.06s, opacity 0.06s',
+                : step === 0
+                  ? 'item-appear 220ms ease-out, idle-float 3.5s ease-in-out 220ms infinite'
+                  : 'idle-float 3.5s ease-in-out infinite',
+            filter: GLOW,
+            transition: 'opacity 0.04s',
           }}
         />
 
@@ -190,10 +192,21 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           }} />
         )}
 
-        {/* Transition flash */}
+        {/* Transition: flash oscuro que oculta completamente el swap de objeto */}
         {isTransition && (
           <div className="absolute inset-0 pointer-events-none"
-            style={{ background: 'rgba(0,246,255,0.07)', mixBlendMode: 'screen' }} />
+            style={{ background: 'rgba(0,8,12,0.96)' }} />
+        )}
+
+        {/* Brief cyan flare al inicio de transición */}
+        {isTransition && (
+          <div className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'rgba(0,246,255,0.12)',
+              mixBlendMode: 'screen',
+              animation: 'transition-flare 100ms ease-out forwards',
+            }}
+          />
         )}
 
         {debug && (

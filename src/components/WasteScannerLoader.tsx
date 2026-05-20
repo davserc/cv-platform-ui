@@ -36,7 +36,7 @@ const FRAME_Y = [
 // FRAME_H=84: el row más corto del atlas es ~81px (paper).
 // Con 84px el crop queda dentro de cada row sin bleeding ni divisor visible.
 const FRAME_W = 160
-const FRAME_H = 84
+const FRAME_H = 93
 const SCALE   = 1.05  // viewport: 168×88px
 
 const VIEWPORT_W = Math.round(FRAME_W * SCALE)  // 168
@@ -47,18 +47,13 @@ const VIEWPORT_H = Math.round(FRAME_H * SCALE)  // 88
 const ITEM_X_FIX = [0, 0, -1, -1, -2, -2, -3, -3, -4, 4]
 
 // ── Frame sequence ────────────────────────────────────────────────────────────
+// El objeto siempre muestra frame 0 durante el escaneo — la ilusión de scan
+// la genera SOLO el CSS scan line. Sin ciclar frames → sin efecto carrusel.
 const FRAME_SEQ = [
-  { frame: 0, duration: 220 },
-  { frame: 1, duration: 75  },
-  { frame: 2, duration: 75  },
-  { frame: 3, duration: 75  },
-  { frame: 4, duration: 90  },
-  { frame: 1, duration: 75  },
-  { frame: 2, duration: 75  },
-  { frame: 3, duration: 75  },
-  { frame: 4, duration: 90  },
-  { frame: 5, duration: 280 },
-  { frame: 6, duration: 100 },
+  { frame: 0, duration: 250  },  // 0: INICIO    — objeto aparece
+  { frame: 0, duration: 1400 },  // 1: SCANNING  — frame fijo, CSS scan activo
+  { frame: 5, duration: 380  },  // 2: COMPLETADO — verde + checkmark
+  { frame: 6, duration: 100  },  // 3: TRANSICIÓN — flash oscuro
 ]
 const OBJECT_HOLD = 180
 
@@ -114,11 +109,12 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
 
   const spriteFrame = FRAME_SEQ[step].frame
   const bgX = FRAME_X[spriteFrame] + ITEM_X_FIX[item] + (debug ? ddx : 0)
-  const bgY = FRAME_Y[item]                           + (debug ? ddy : 0)
+  const bgY = FRAME_Y[item]                            + (debug ? ddy : 0)
 
-  const isScanning   = spriteFrame >= 1 && spriteFrame <= 4
-  const isComplete   = spriteFrame === 5
-  const isTransition = spriteFrame === 6
+  // Detectar estado por índice de step (no por spriteFrame — durante scan siempre es 0)
+  const isScanning   = step === 1
+  const isComplete   = step === 2
+  const isTransition = step === 3
 
   if (!ready) {
     return (
@@ -160,28 +156,26 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             // Durante transición: invisible → el flash del overlay oculta el swap
             opacity: isTransition ? 0 : 1,
             animation: frozen || isTransition ? undefined
-              : isScanning
-                ? 'scan-wobble 700ms ease-in-out infinite alternate'
-                : step === 0
-                  ? 'item-appear 220ms ease-out, idle-float 3.5s ease-in-out 220ms infinite'
-                  : 'idle-float 3.5s ease-in-out infinite',
+              : step === 0
+                ? 'item-appear 200ms ease-out, idle-float 3.5s ease-in-out 200ms infinite'
+                : 'idle-float 3.5s ease-in-out infinite',
             filter: GLOW,
             transition: 'opacity 0.04s',
           }}
         />
 
-        {/* Scan line */}
+        {/* Scan line — único elemento que se mueve durante el escaneo */}
         {isScanning && (
           <div
             style={{
               position: 'absolute',
-              left: 8,
-              right: 8,
+              left: 6,
+              right: 6,
               height: 2,
-              background: '#00f6ff',
-              filter: 'blur(0.5px)',
-              boxShadow: '0 0 4px #00f6ff, 0 0 10px #00f6ff, 0 0 18px rgba(0,246,255,0.35)',
-              animation: 'scan-move 900ms linear infinite',
+              background: 'linear-gradient(90deg, transparent, #00f6ff 20%, #00f6ff 80%, transparent)',
+              filter: 'blur(0.8px)',
+              boxShadow: '0 0 6px #00f6ff, 0 0 14px #00f6ff, 0 0 28px rgba(0,246,255,0.4)',
+              animation: 'scan-move 750ms linear infinite',
             }}
           />
         )}

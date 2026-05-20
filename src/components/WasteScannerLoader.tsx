@@ -52,10 +52,10 @@ const ITEM_X_FIX = [0, 0, -1, -1, -2, -2, -3, -3, -4, 4]
 const FRAME_SEQ = [
   { frame: 0, duration: 250  },  // 0: INICIO    — objeto aparece
   { frame: 0, duration: 2200 },  // 1: SCANNING  — frame fijo, CSS scan activo
-  { frame: 5, duration: 750  },  // 2: COMPLETADO — verde + checkmark
-  { frame: 6, duration: 100  },  // 3: TRANSICIÓN — flash oscuro
+  { frame: 5, duration: 750  },  // 2: COMPLETADO — sprite verde columna 6
+  { frame: 6, duration: 500  },  // 3: TRANSICIÓN — barra de wipe + fade
 ]
-const OBJECT_HOLD = 180
+const OBJECT_HOLD = 80
 
 const ITEMS = [
   { name: 'Botella de Plástico', cat: 'plástico'    },
@@ -140,22 +140,20 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           opacity: 0.92,
         }}
       >
-        {/* Sprite: key cambia con item Y con spriteFrame → remount garantizado al entrar en COMPLETADO */}
+        {/* ── Sprite INICIO / SCANNING (frame 0) ─────────────────── */}
         <div
-          key={`${item}-${spriteFrame}`}
+          key={item}
           style={{
             position: 'absolute',
             width: FRAME_W,
             height: FRAME_H,
             backgroundImage: `url(${SPRITE_SRC})`,
             backgroundRepeat: 'no-repeat',
-            backgroundPosition: `-${bgX}px -${bgY}px`,
+            backgroundPosition: `-${FRAME_X[0] + ITEM_X_FIX[item]}px -${bgY}px`,
             imageRendering: 'pixelated',
             transformOrigin: 'top left',
-            willChange: 'background-position, transform',
-            // Durante transición: invisible. Sin CSS transition — evita conflicto con animation.
-            opacity: isTransition ? 0 : 1,
-            animation: frozen || isTransition ? undefined
+            opacity: (isComplete || isTransition) ? 0 : 1,
+            animation: frozen ? undefined
               : step === 0
                 ? 'item-appear 200ms ease-out, idle-float 3.5s ease-in-out 200ms infinite'
                 : 'idle-float 3.5s ease-in-out infinite',
@@ -163,7 +161,25 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           }}
         />
 
-        {/* Scan line — único elemento que se mueve durante el escaneo */}
+        {/* ── Sprite COMPLETADO (frame 5) — div independiente garantizado ── */}
+        {isComplete && (
+          <div
+            style={{
+              position: 'absolute',
+              width: FRAME_W,
+              height: FRAME_H,
+              backgroundImage: `url(${SPRITE_SRC})`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: `-${FRAME_X[5] + ITEM_X_FIX[item]}px -${bgY}px`,
+              imageRendering: 'pixelated',
+              transformOrigin: 'top left',
+              animation: 'item-appear 180ms ease-out, idle-float 3.5s ease-in-out 180ms infinite',
+              filter: GLOW,
+            }}
+          />
+        )}
+
+        {/* Scan line */}
         {isScanning && (
           <div
             style={{
@@ -182,26 +198,32 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
         {/* Completed glow */}
         {isComplete && (
           <div className="absolute inset-0 pointer-events-none" style={{
-            background: 'radial-gradient(ellipse at center, rgba(74,222,128,0.16) 0%, transparent 68%)',
+            background: 'radial-gradient(ellipse at center, rgba(74,222,128,0.18) 0%, transparent 68%)',
             animation: 'pulse-scale 0.9s ease-in-out infinite',
           }} />
         )}
 
-        {/* Transition: flash oscuro que oculta completamente el swap de objeto */}
+        {/* ── Transición: barra de wipe que barre de arriba a abajo ── */}
         {isTransition && (
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: 'rgba(0,8,12,0.96)' }} />
-        )}
-
-        {/* Brief cyan flare al inicio de transición */}
-        {isTransition && (
-          <div className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'rgba(0,246,255,0.12)',
-              mixBlendMode: 'screen',
-              animation: 'transition-flare 100ms ease-out forwards',
-            }}
-          />
+          <>
+            {/* Fondo oscuro */}
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: 'rgba(0,5,10,0.97)' }} />
+            {/* Barra cyan que barre */}
+            <div className="absolute inset-x-0 pointer-events-none" style={{
+              height: 3,
+              background: 'linear-gradient(90deg, transparent 0%, #00f6ff 25%, #fff 50%, #00f6ff 75%, transparent 100%)',
+              boxShadow: '0 0 8px #00f6ff, 0 0 24px rgba(0,246,255,0.7), 0 0 48px rgba(0,246,255,0.3)',
+              filter: 'blur(0.5px)',
+              animation: 'system-wipe 480ms ease-in-out forwards',
+            }} />
+            {/* Eco de la barra (trail) */}
+            <div className="absolute inset-x-0 pointer-events-none" style={{
+              height: 30,
+              background: 'linear-gradient(180deg, rgba(0,246,255,0.08) 0%, transparent 100%)',
+              animation: 'system-wipe-trail 480ms ease-in-out forwards',
+            }} />
+          </>
         )}
 
         {debug && (

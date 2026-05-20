@@ -161,8 +161,9 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           }}
         />
 
-        {/* ── Sprite COMPLETADO — visible en step 2 Y step 3 (animación de salida) ── */}
-        {(isComplete || isTransition) && (
+        {/* ── Sprite COMPLETADO — div propio, solo cuando step===2 ──────────────── */}
+        {/* Usa completado-appear (no item-appear) para evitar conflicto de scale+opacity */}
+        {isComplete && (
           <div
             style={{
               position: 'absolute',
@@ -173,10 +174,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
               backgroundPosition: `-${FRAME_X[5] + ITEM_X_FIX[item]}px -${bgY}px`,
               imageRendering: 'pixelated',
               transformOrigin: 'top left',
-              // Durante TRANSICIÓN: exit animation; durante COMPLETADO: aparece y flota
-              animation: isTransition
-                ? 'complete-exit 200ms ease-in forwards'
-                : 'item-appear 180ms ease-out, idle-float 3.5s ease-in-out 180ms infinite',
+              animation: 'completado-appear 150ms ease-out, idle-float 3.5s ease-in-out 150ms infinite',
               filter: GLOW,
             }}
           />
@@ -206,26 +204,26 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           }} />
         )}
 
-        {/* ── Transición: exit(0-200ms) → wipe barre(200-560ms) ──── */}
+        {/* ── Transición: fondo oscuro inmediato + barra cyan barre ── */}
         {isTransition && (
           <>
-            {/* Fondo oscuro — aparece gradualmente con el exit */}
+            {/* Fondo oscuro inmediato — cubre el recorte del COMPLETADO */}
             <div className="absolute inset-0 pointer-events-none"
-              style={{ background: 'rgba(0,5,10,0.95)', animation: 'bg-fade-in 200ms ease-in forwards' }} />
-            {/* Barra cyan — empieza cuando el exit termina (delay 180ms) */}
+              style={{ background: 'rgba(0,5,10,0.96)' }} />
+            {/* Barra cyan que barre de arriba a abajo */}
             <div className="absolute inset-x-0 pointer-events-none" style={{
               height: 3,
               background: 'linear-gradient(90deg, transparent 0%, #00f6ff 25%, #fff 50%, #00f6ff 75%, transparent 100%)',
-              boxShadow: '0 0 8px #00f6ff, 0 0 24px rgba(0,246,255,0.7), 0 0 48px rgba(0,246,255,0.3)',
+              boxShadow: '0 0 8px #00f6ff, 0 0 24px rgba(0,246,255,0.7)',
               filter: 'blur(0.5px)',
-              animation: 'system-wipe 360ms 180ms ease-in-out forwards',
+              animation: 'system-wipe 460ms ease-in-out forwards',
               opacity: 0,
             }} />
-            {/* Trail de la barra */}
+            {/* Trail */}
             <div className="absolute inset-x-0 pointer-events-none" style={{
               height: 32,
-              background: 'linear-gradient(180deg, rgba(0,246,255,0.1) 0%, transparent 100%)',
-              animation: 'system-wipe-trail 360ms 180ms ease-in-out forwards',
+              background: 'linear-gradient(180deg, rgba(0,246,255,0.08) 0%, transparent 100%)',
+              animation: 'system-wipe-trail 460ms ease-in-out forwards',
               opacity: 0,
             }} />
           </>

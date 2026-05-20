@@ -21,3 +21,8 @@
   from { transform: rotate(0deg)   translateX(78px) rotate(0deg);    }
   to   { transform: rotate(360deg) translateX(78px) rotate(-360deg); }
 }
+
+@keyframes scan-line {
+  from { background-position-y: 0px; }
+  to   { background-position-y: 8px; }
+}

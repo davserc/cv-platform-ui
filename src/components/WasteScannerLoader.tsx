@@ -153,14 +153,13 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             imageRendering: 'pixelated',
             transformOrigin: 'top left',
             willChange: 'background-position, transform',
-            // Durante transición: invisible → el flash del overlay oculta el swap
+            // Durante transición: invisible. Sin CSS transition — evita conflicto con animation.
             opacity: isTransition ? 0 : 1,
             animation: frozen || isTransition ? undefined
-              : step === 0 || step === 2
+              : step === 0
                 ? 'item-appear 200ms ease-out, idle-float 3.5s ease-in-out 200ms infinite'
                 : 'idle-float 3.5s ease-in-out infinite',
             filter: GLOW,
-            transition: 'opacity 0.04s',
           }}
         />
 

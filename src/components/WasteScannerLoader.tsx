@@ -113,10 +113,11 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   const isComplete   = step === 2
   const isTransition = step === 3
 
-  // Posiciones explícitas — no derivadas de spriteFrame para evitar confusión
-  const xFix   = ITEM_X_FIX[item] + (debug ? ddx : 0)
-  const inicioBgX    = FRAME_X[0] + xFix
+  // Posiciones explícitas por estado
+  const xFix          = ITEM_X_FIX[item] + (debug ? ddx : 0)
+  const inicioBgX     = FRAME_X[0] + xFix
   const completadoBgX = FRAME_X[4] + xFix
+  const transicioBgX  = FRAME_X[5] + xFix   // columna transición: scan lines
 
   if (!ready) {
     return (
@@ -152,19 +153,20 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             height: FRAME_H,
             backgroundImage: `url(${SPRITE_SRC})`,
             backgroundRepeat: 'no-repeat',
-            backgroundPosition: (isComplete || isTransition)
-              ? `-${completadoBgX}px -${bgY + COMPLETE_Y_FIX}px`
-              : `-${inicioBgX}px -${bgY}px`,
+            backgroundPosition: isTransition
+              ? `-${transicioBgX}px -${bgY}px`
+              : isComplete
+                ? `-${completadoBgX}px -${bgY + COMPLETE_Y_FIX}px`
+                : `-${inicioBgX}px -${bgY}px`,
             imageRendering: 'pixelated',
             transformOrigin: 'top left',
-            opacity: isTransition ? 0 : 1,
-            // Fade-out suave al entrar en TRANSICIÓN; sin transition en otros estados
-            // para que item-appear no conflictúe
-            transition: isTransition ? 'opacity 260ms ease-in' : undefined,
+            // Opacity 1 siempre; durante TRANSICIÓN se desvanece via 'transition-out'
             animation: frozen ? undefined
-              : step === 0
-                ? 'item-appear 200ms ease-out, idle-float 3.5s ease-in-out 200ms infinite'
-                : 'idle-float 3.5s ease-in-out infinite',
+              : isTransition
+                ? 'transition-out 560ms ease-in forwards'
+                : step === 0
+                  ? 'item-appear 200ms ease-out, idle-float 3.5s ease-in-out 200ms infinite'
+                  : 'idle-float 3.5s ease-in-out infinite',
             filter: isComplete
               ? 'drop-shadow(0 0 4px rgba(74,222,128,.3)) drop-shadow(0 0 10px rgba(74,222,128,.15))'
               : GLOW,
@@ -195,20 +197,16 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           }} />
         )}
 
-        {/* ── Transición: fondo + wipe con z-index explícito ──────── */}
+        {/* ── Transición: barra de wipe sobre el sprite de transición ── */}
         {isTransition && (
-          <>
-            <div className="absolute inset-0 pointer-events-none"
-              style={{ background: '#000810', zIndex: 10 }} />
-            <div className="absolute inset-x-0 pointer-events-none" style={{
-              height: 2,
-              zIndex: 11,
-              background: 'linear-gradient(90deg, transparent 0%, #00f6ff 30%, #fff 50%, #00f6ff 70%, transparent 100%)',
-              boxShadow: '0 0 8px #00f6ff, 0 0 20px rgba(0,246,255,0.6)',
-              animation: 'system-wipe 420ms ease-in-out forwards',
-              opacity: 0,
-            }} />
-          </>
+          <div className="absolute inset-x-0 pointer-events-none" style={{
+            height: 2,
+            zIndex: 11,
+            background: 'linear-gradient(90deg, transparent 0%, #00f6ff 30%, #fff 50%, #00f6ff 70%, transparent 100%)',
+            boxShadow: '0 0 8px #00f6ff, 0 0 20px rgba(0,246,255,0.6)',
+            animation: 'system-wipe 420ms ease-in-out forwards',
+            opacity: 0,
+          }} />
         )}
 
         {debug && (

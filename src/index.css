@@ -22,7 +22,15 @@
   to   { transform: rotate(360deg) translateX(78px) rotate(-360deg); }
 }
 
-@keyframes scan-line {
-  from { background-position-y: 0px; }
-  to   { background-position-y: 8px; }
+/* WasteScannerLoader — laser line moves top→bottom while scanning */
+@keyframes scan-move {
+  0%   { top: 20%; opacity: 0.8; }
+  50%  { top: 50%; opacity: 1;   }
+  100% { top: 80%; opacity: 0.8; }
+}
+
+/* WasteScannerLoader — hologram platform float */
+@keyframes float-obj {
+  0%,100% { transform: translateY(0px);  }
+  50%      { transform: translateY(-3px); }
 }

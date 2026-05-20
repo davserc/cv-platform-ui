@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 
-// ── Spritesheet layout (fixed, matches the design) ───────────────────────────
-// Place the spritesheet at: public/sprites/waste-scanner.png
-// The component auto-detects frame size from the actual PNG dimensions.
-const COLS  = 7   // frames per item: INICIO · ESC 1-4 · COMPLETADO · TRANSICIÓN
-const ROWS  = 10  // items
-const DISPLAY = 200  // rendered sprite size (px)
+// ── Spritesheet layout ────────────────────────────────────────────────────────
+// public/sprites/waste-scanner.png — 7 cols × 10 rows
+// Frames: 0=INICIO · 1-4=SCAN · 5=COMPLETADO · 6=TRANSICIÓN
+const COLS    = 7
+const ROWS    = 10
+const DISPLAY = 200   // rendered px per frame (square)
 
-// ms each frame is held — INICIO · ESC×4 · COMPLETADO · TRANSICIÓN
-const DURATIONS = [500, 200, 200, 200, 200, 900, 350]
+// State-machine timings — NOT linear. Gives "real software" feel.
+//  INICIO  SCAN×4         COMPLETADO  TRANSICIÓN
+const DURATIONS = [300, 90, 90, 90, 120, 450, 120]
 
 const ITEMS = [
   'Botella de Plástico',
@@ -23,15 +24,13 @@ const ITEMS = [
   'Tetra Pak',
 ]
 
-const FRAME_LABELS = [
-  'Iniciando escáner',
-  'Escaneando',
-  'Analizando',
-  'Procesando',
-  'Clasificando',
-  'Completado',
-  '',
+const CATEGORY_LABELS = [
+  'plástico', 'metal', 'papel/cartón', 'plástico',
+  'cartón', 'plástico', 'vidrio', 'metal', 'papel', 'tetra pak',
 ]
+
+// Subtle rotation per scan frame — brain reads it as 3D volume
+const SCAN_ROT = [-3, 2, -2, 3]
 
 const SPRITE_SRC = '/sprites/waste-scanner.png'
 
@@ -42,7 +41,6 @@ export default function WasteScannerLoader({ jobId }: Props) {
   const [item,  setItem]  = useState(0)
   const [frame, setFrame] = useState(0)
 
-  // Verify the PNG exists before starting the animation
   useEffect(() => {
     const img = new Image()
     img.onload  = () => setReady(true)
@@ -50,7 +48,7 @@ export default function WasteScannerLoader({ jobId }: Props) {
     img.src = SPRITE_SRC
   }, [])
 
-  // Animate frame by frame
+  // State machine — advance frames, loop items
   useEffect(() => {
     if (!ready) return
     const id = setTimeout(() => {
@@ -64,77 +62,117 @@ export default function WasteScannerLoader({ jobId }: Props) {
     return () => clearTimeout(id)
   }, [frame, item, ready])
 
-  const isScanning  = frame >= 1 && frame <= 4
-  const isCompleted = frame === 5
-  const label       = FRAME_LABELS[frame] ?? ''
+  const isScanning   = frame >= 1 && frame <= 4
+  const isCompleted  = frame === 5
+  const isTransition = frame === 6
 
-  if (!ready) {
-    // Fallback while PNG loads (or if missing)
-    return (
-      <div className="flex flex-col items-center gap-3 py-8 select-none">
-        <div
-          className="w-12 h-12 rounded-full border-2 border-cyan-600 border-t-transparent animate-spin"
-          style={{ borderTopColor: 'transparent' }}
-        />
-        <p className="text-xs font-mono text-gray-600">Cargando escáner…</p>
-        <p className="text-[9px] font-mono text-gray-800">{jobId.slice(0, 8)}</p>
-      </div>
-    )
-  }
-
-  // Scale X and Y independently so each frame fills DISPLAY×DISPLAY exactly,
-  // regardless of whether the source frames are square or not.
+  // Sprite position in the spritesheet
   const bgX = -(frame * DISPLAY)
   const bgY = -(item  * DISPLAY)
   const bgW =  DISPLAY * COLS
   const bgH =  DISPLAY * ROWS
 
+  // Per-frame transform: rotation during scan + glitch scale during transition
+  const rotation = isScanning ? (SCAN_ROT[frame - 1] ?? 0) : 0
+  const spriteTransform = isTransition
+    ? `scale(1.02) rotate(${rotation}deg)`
+    : `scale(1) rotate(${rotation}deg)`
+  const spriteFilter    = isTransition ? 'brightness(1.4) saturate(1.2)' : 'none'
+  const spriteOpacity   = isTransition ? 0.82 : 1
+
+  if (!ready) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-8 select-none">
+        <div
+          className="w-10 h-10 rounded-full border-2 border-cyan-700 animate-spin"
+          style={{ borderTopColor: 'transparent' }}
+        />
+        <p className="text-[10px] font-mono text-gray-700">Cargando escáner…</p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col items-center gap-3 py-5 select-none">
 
-      {/* overflow:hidden clips the background to exactly one frame */}
-      <div className="relative overflow-hidden" style={{ width: DISPLAY, height: DISPLAY }}>
-        <div
-          style={{
-            width: DISPLAY,
-            height: DISPLAY,
-            backgroundImage: `url(${SPRITE_SRC})`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: `${bgX}px ${bgY}px`,
-            backgroundSize: `${bgW}px ${bgH}px`,
-            imageRendering: 'pixelated',
-          }}
-        />
+      {/* ── Scanner viewport ─────────────────────────────────────── */}
+      <div
+        className="relative overflow-hidden"
+        style={{ width: DISPLAY, height: DISPLAY }}
+      >
+        {/* Float wrapper — hologram platform feel */}
+        <div style={{ width: DISPLAY, height: DISPLAY, animation: 'float-obj 2s ease-in-out infinite' }}>
+          <div
+            style={{
+              width: DISPLAY,
+              height: DISPLAY,
+              backgroundImage: `url(${SPRITE_SRC})`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: `${bgX}px ${bgY}px`,
+              backgroundSize: `${bgW}px ${bgH}px`,
+              imageRendering: 'pixelated',
+              transform: spriteTransform,
+              filter: spriteFilter,
+              opacity: spriteOpacity,
+              transition: 'transform 0.07s ease-out, filter 0.05s, opacity 0.06s',
+            }}
+          />
+        </div>
 
-        {/* Scan-line overlay during ESCANEANDO frames */}
+        {/* CSS laser line — moves top→bottom while scanning */}
         {isScanning && (
+          <div
+            className="absolute left-0 right-0 pointer-events-none"
+            style={{
+              height: 4,
+              background: 'linear-gradient(90deg, transparent 0%, #00f6ff 40%, #00f6ff 60%, transparent 100%)',
+              filter: 'blur(1.5px)',
+              boxShadow: '0 0 10px rgba(0,246,255,0.9), 0 0 22px rgba(0,246,255,0.4)',
+              animation: 'scan-move 0.65s linear infinite',
+            }}
+          />
+        )}
+
+        {/* Completed green glow */}
+        {isCompleted && (
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background:
-                'repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(6,182,212,0.07) 3px,rgba(6,182,212,0.07) 4px)',
-              animation: 'scan-line 1.2s linear infinite',
+              background: 'radial-gradient(ellipse at center, rgba(74,222,128,0.14) 0%, transparent 68%)',
+              animation: 'pulse-scale 0.9s ease-in-out infinite',
             }}
+          />
+        )}
+
+        {/* Transition flash — cyan glitch */}
+        {isTransition && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: 'rgba(0,246,255,0.09)', mixBlendMode: 'screen' }}
           />
         )}
       </div>
 
-      {/* Item name */}
+      {/* ── Labels ───────────────────────────────────────────────── */}
       <p
-        className="text-xs font-mono tracking-widest uppercase transition-colors duration-300"
+        className="text-xs font-mono tracking-widest uppercase transition-colors duration-200"
         style={{ color: isCompleted ? '#4ade80' : '#06b6d4' }}
       >
         {isCompleted ? '✓ ' : ''}{ITEMS[item]}
       </p>
 
-      {/* Frame status */}
-      {label && (
-        <p className="text-[10px] font-mono text-gray-600 tracking-wide">
-          {label}{isScanning && <span className="animate-pulse">…</span>}
+      {isCompleted && (
+        <p className="text-[10px] font-mono tracking-wide" style={{ color: '#4ade8099' }}>
+          {CATEGORY_LABELS[item]} detectado
         </p>
       )}
 
-      {/* Job ID */}
+      {isScanning && (
+        <p className="text-[10px] font-mono text-gray-600 tracking-wide">
+          escaneando<span className="animate-pulse">…</span>
+        </p>
+      )}
+
       <p className="text-[9px] font-mono text-gray-800">{jobId.slice(0, 8)}</p>
     </div>
   )

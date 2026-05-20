@@ -12,9 +12,9 @@ import { useEffect, useState } from 'react'
 //  Rows 0-4 and rows 5-9 are two independent sections; uniform spacing fails.
 //
 // ── Column X — left edge of safe crop zone per frame ─────────────────────────
-const FRAME_X = [224, 446, 668, 890, 1152, 1334]
+const FRAME_X = [224, 446, 668, 890, 1153, 1334]
 //               ini  sc1  sc2  sc3  comp  trans
-//               comp calibrado: 1112 base + 40 (debug gdx medido)
+const COMPLETE_Y_FIX = 3  // offset Y del sprite COMPLETADO vs INICIO (gdy calibrado)
 
 // ── Row Y — medido exactamente con debug calibrator ──────────────────────────
 // El spacing no es uniforme: gaps van de 81 a 100px según el objeto.
@@ -170,7 +170,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
               height: FRAME_H,
               backgroundImage: `url(${SPRITE_SRC})`,
               backgroundRepeat: 'no-repeat',
-              backgroundPosition: `-${bgX}px -${bgY}px`,
+              backgroundPosition: `-${bgX}px -${bgY + COMPLETE_Y_FIX}px`,
               imageRendering: 'pixelated',
               transformOrigin: 'top left',
               opacity: 1,

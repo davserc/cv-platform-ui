@@ -37,10 +37,10 @@ const FRAME_Y = [
 // Con 84px el crop queda dentro de cada row sin bleeding ni divisor visible.
 const FRAME_W = 160
 const FRAME_H = 93
-const SCALE   = 1.05  // viewport: 168×88px
+const SCALE   = 0.82  // viewport: 131×76px
 
-const VIEWPORT_W = Math.round(FRAME_W * SCALE)  // 168
-const VIEWPORT_H = Math.round(FRAME_H * SCALE)  // 88
+const VIEWPORT_W = Math.round(FRAME_W * SCALE)  // 131
+const VIEWPORT_H = Math.round(FRAME_H * SCALE)  // 76
 
 // Per-item X corrections (medido con debug calibrator)
 // Tetra pak: ROW_X_FIX previo era -4, usuario midió gdx=+8 → net = +4

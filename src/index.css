@@ -27,14 +27,14 @@
 
 /* Entrada: leve scale-up mientras el objeto aparece */
 @keyframes item-appear {
-  from { opacity: 0; transform: scale(1.01); }
-  to   { opacity: 1; transform: scale(1.05); }
+  from { opacity: 0; transform: scale(0.79); }
+  to   { opacity: 1; transform: scale(0.82); }
 }
 
 /* Salida durante TRANSICIÓN: sprite visible 70% del tiempo, luego fade */
 @keyframes transition-out {
-  0%, 70% { opacity: 1; transform: scale(1.05) translateY(0); }
-  100%     { opacity: 0; transform: scale(1.05) translateY(0); }
+  0%, 70% { opacity: 1; transform: scale(0.82) translateY(0); }
+  100%     { opacity: 0; transform: scale(0.82) translateY(0); }
 }
 
 /* Barra de wipe que barre de arriba a abajo durante la transición */
@@ -54,8 +54,8 @@
 
 /* Float vertical suave sin rotación — el objeto parece estar en una plataforma holográfica */
 @keyframes idle-float {
-  0%,100% { transform: scale(1.05) translateY(0px);  }
-  50%      { transform: scale(1.05) translateY(-2px); }
+  0%,100% { transform: scale(0.82) translateY(0px);  }
+  50%      { transform: scale(0.82) translateY(-2px); }
 }
 
 @keyframes scan-move {

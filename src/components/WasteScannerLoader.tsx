@@ -2,7 +2,22 @@ import { useEffect, useState } from 'react'
 
 // ── Spritesheet — exact pixel offsets per cell ────────────────────────────────
 const FRAME_X = [246, 468, 690, 912, 1134, 1355, 1456]   // 7 columnas
-const FRAME_Y = [96, 208, 320, 432, 544, 656, 768, 880, 992, 1104]  // 10 filas
+// Y medidos exactamente — el atlas no tiene spacing constante
+const FRAME_Y = [
+   96,  // 01 bottle
+  205,  // 02 can
+  316,  // 03 wrapper
+  427,  // 04 cup
+  541,  // 05 cardboard
+  652,  // 06 bag
+  764,  // 07 glass
+  875,  // 08 metal
+  986,  // 09 paper
+ 1098,  // 10 tetra
+]
+
+// Compensación horizontal por fila — las filas bajas tienen drift acumulativo
+const ROW_X_FIX = [0, 0, -1, -1, -2, -2, -3, -3, -4, -4]
 
 const FRAME_W = 102   // safe crop width  a 1×
 const FRAME_H = 84    // safe crop height a 1×
@@ -24,19 +39,19 @@ const FRAME_OFFSET_FIX = [
 
 // ── Secuencia: scan loop ×2 ───────────────────────────────────────────────────
 const FRAME_SEQ = [
-  { frame: 0, duration: 220 },
-  { frame: 1, duration: 55  },
-  { frame: 2, duration: 55  },
-  { frame: 3, duration: 55  },
-  { frame: 4, duration: 65  },
-  { frame: 1, duration: 55  },
-  { frame: 2, duration: 55  },
-  { frame: 3, duration: 55  },
-  { frame: 4, duration: 65  },
-  { frame: 5, duration: 320 },
-  { frame: 6, duration: 80  },
+  { frame: 0, duration: 320 },
+  { frame: 1, duration: 90  },
+  { frame: 2, duration: 90  },
+  { frame: 3, duration: 90  },
+  { frame: 4, duration: 110 },
+  { frame: 1, duration: 90  },
+  { frame: 2, duration: 90  },
+  { frame: 3, duration: 90  },
+  { frame: 4, duration: 110 },
+  { frame: 5, duration: 420 },
+  { frame: 6, duration: 100 },
 ]
-const OBJECT_HOLD = 120
+const OBJECT_HOLD = 180
 
 const ITEMS = [
   { name: 'Botella de Plástico', cat: 'plástico'    },
@@ -89,8 +104,8 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
 
   const spriteFrame = FRAME_SEQ[step].frame
   const fix = FRAME_OFFSET_FIX[spriteFrame]
-  const bgX = FRAME_X[spriteFrame] + fix.x + (debug ? ddx : 0)
-  const bgY = FRAME_Y[item]         + fix.y + (debug ? ddy : 0)
+  const bgX = FRAME_X[spriteFrame] + fix.x + ROW_X_FIX[item] + (debug ? ddx : 0)
+  const bgY = FRAME_Y[item]                                    + (debug ? ddy : 0)
 
   const isScanning   = spriteFrame >= 1 && spriteFrame <= 4
   const isComplete   = spriteFrame === 5
@@ -133,8 +148,8 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             willChange: 'background-position, transform',
             animation: frozen ? undefined
               : isScanning
-                ? 'scan-wobble 400ms ease-in-out infinite alternate'
-                : 'idle-float 3s ease-in-out infinite',
+                ? 'scan-wobble 700ms ease-in-out infinite alternate'
+                : 'idle-float 3.5s ease-in-out infinite',
             filter: isTransition ? 'brightness(1.3) saturate(1.15)' : 'none',
             opacity: isTransition ? 0.85 : 1,
             transition: 'filter 0.06s, opacity 0.06s',
@@ -152,7 +167,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
               background: '#00f6ff',
               filter: 'blur(0.5px)',
               boxShadow: '0 0 4px #00f6ff, 0 0 10px #00f6ff, 0 0 20px rgba(0,246,255,0.4)',
-              animation: 'scan-move 600ms linear infinite',
+              animation: 'scan-move 900ms linear infinite',
             }}
           />
         )}

@@ -1,34 +1,45 @@
 import { useEffect, useState } from 'react'
 
-// ── Spritesheet: 1536×1024 — 7 cols (frames) × 10 rows (items) ───────────────
-const FRAME_W   = 150
-const FRAME_H   = 112
-const START_X   = 225
-const START_Y   = 84
-const GAP_X     = 18
-const GAP_Y     = 20
-const SCALE     = 2
+// ── Spritesheet layout ─────────────────────────────────────────────────────────
+const FRAME_W = 122
+const FRAME_H = 92
+const START_X = 252
+const START_Y = 106
+const GAP_X   = 46
+const GAP_Y   = 40
+const SCALE   = 1.45
 
-// Per-frame durations (ms) — not a fixed interval
+// Crop: show only the useful zone inside each cell (trims padding/labels/pedestal)
+const CROP_X = 28   // px from cell left edge
+const CROP_Y = 18   // px from cell top edge
+const CROP_W = 92   // visible width at 1×
+const CROP_H = 82   // visible height at 1×
+
+// ── Frame sequence — sprite column index + duration (ms) ─────────────────────
+// Scan loop runs twice to give "el sistema está analizando" feel
 const FRAME_SEQ = [
-  { duration: 280 },  // 0 INICIO
-  { duration: 90  },  // 1 SCAN_1
-  { duration: 90  },  // 2 SCAN_2
-  { duration: 90  },  // 3 SCAN_3
-  { duration: 110 },  // 4 SCAN_4
-  { duration: 420 },  // 5 COMPLETADO
-  { duration: 120 },  // 6 TRANSICIÓN
+  { frame: 0, duration: 220 },  // INICIO
+  { frame: 1, duration: 55  },  // SCAN_1
+  { frame: 2, duration: 55  },  // SCAN_2
+  { frame: 3, duration: 55  },  // SCAN_3
+  { frame: 4, duration: 65  },  // SCAN_4
+  { frame: 1, duration: 55  },  // SCAN_1 (segundo loop)
+  { frame: 2, duration: 55  },  // SCAN_2
+  { frame: 3, duration: 55  },  // SCAN_3
+  { frame: 4, duration: 65  },  // SCAN_4
+  { frame: 5, duration: 340 },  // COMPLETADO
+  { frame: 6, duration: 80  },  // TRANSICIÓN
 ]
-const OBJECT_HOLD = 150   // ms between transition and next object
+const OBJECT_HOLD = 120   // ms entre transición y siguiente objeto
 
 const ITEMS = [
   { name: 'Botella de Plástico', cat: 'plástico'    },
   { name: 'Lata de Aluminio',    cat: 'metal'       },
   { name: 'Envoltorio',          cat: 'papel/cartón'},
-  { name: 'Vaso Descartable',   cat: 'plástico'    },
+  { name: 'Vaso Descartable',    cat: 'plástico'    },
   { name: 'Cartón',              cat: 'cartón'      },
   { name: 'Bolsa Plástica',      cat: 'plástico'    },
-  { name: 'Botella de Vidrio',  cat: 'vidrio'      },
+  { name: 'Botella de Vidrio',   cat: 'vidrio'      },
   { name: 'Lata de Metal',       cat: 'metal'       },
   { name: 'Papel',               cat: 'papel'       },
   { name: 'Tetra Pak',           cat: 'tetra pak'   },
@@ -56,7 +67,7 @@ interface Props { jobId: string; debug?: boolean }
 export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   const [ready,  setReady]  = useState(false)
   const [item,   setItem]   = useState(0)
-  const [frame,  setFrame]  = useState(0)
+  const [step,   setStep]   = useState(0)   // índice en FRAME_SEQ
   const [frozen, setFrozen] = useState(false)
 
   // Debug overrides
@@ -66,15 +77,24 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   const [dsy, setDsy] = useState(START_Y)
   const [dgx, setDgx] = useState(GAP_X)
   const [dgy, setDgy] = useState(GAP_Y)
+  const [dcx, setDcx] = useState(CROP_X)
+  const [dcy, setDcy] = useState(CROP_Y)
+  const [dcw, setDcw] = useState(CROP_W)
+  const [dch, setDch] = useState(CROP_H)
 
-  const fw = debug ? dfw : FRAME_W
-  const fh = debug ? dfh : FRAME_H
-  const sx = debug ? dsx : START_X
-  const sy = debug ? dsy : START_Y
-  const gx = debug ? dgx : GAP_X
-  const gy = debug ? dgy : GAP_Y
-  const dw = fw * SCALE
-  const dh = fh * SCALE
+  const fw    = debug ? dfw : FRAME_W
+  const fh    = debug ? dfh : FRAME_H
+  const sx    = debug ? dsx : START_X
+  const sy    = debug ? dsy : START_Y
+  const gx    = debug ? dgx : GAP_X
+  const gy    = debug ? dgy : GAP_Y
+  const cropX = debug ? dcx : CROP_X
+  const cropY = debug ? dcy : CROP_Y
+  const cropW = debug ? dcw : CROP_W
+  const cropH = debug ? dch : CROP_H
+
+  const dw = Math.round(cropW * SCALE)
+  const dh = Math.round(cropH * SCALE)
 
   useEffect(() => {
     const img = new Image()
@@ -83,27 +103,29 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
     img.src = SPRITE_SRC
   }, [])
 
-  // Frame state machine with per-frame duration + object hold
+  // State machine con per-step duration + hold entre objetos
   useEffect(() => {
     if (!ready || frozen) return
-    const dur = (FRAME_SEQ[frame]?.duration ?? 120) + (frame === FRAME_SEQ.length - 1 ? OBJECT_HOLD : 0)
+    const isLast = step === FRAME_SEQ.length - 1
+    const dur = FRAME_SEQ[step].duration + (isLast ? OBJECT_HOLD : 0)
     const id = setTimeout(() => {
-      if (frame < FRAME_SEQ.length - 1) {
-        setFrame(f => f + 1)
+      if (!isLast) {
+        setStep(s => s + 1)
       } else {
         setItem(i => (i + 1) % ITEMS.length)
-        setFrame(0)
+        setStep(0)
       }
     }, dur)
     return () => clearTimeout(id)
-  }, [frame, item, ready, frozen])
+  }, [step, item, ready, frozen])
 
-  const bgX = sx + frame * (fw + gx)
-  const bgY = sy + item  * (fh + gy)
+  const spriteFrame = FRAME_SEQ[step].frame
+  const bgX = sx + spriteFrame * (fw + gx) + cropX
+  const bgY = sy + item * (fh + gy) + cropY
 
-  const isScanning   = frame >= 1 && frame <= 4
-  const isComplete   = frame === 5
-  const isTransition = frame === 6
+  const isScanning   = spriteFrame >= 1 && spriteFrame <= 4
+  const isComplete   = spriteFrame === 5
+  const isTransition = spriteFrame === 6
 
   if (!ready) {
     return (
@@ -128,37 +150,39 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           imageRendering: 'pixelated',
         }}
       >
-        {/* Sprite — scale(2) + float in one transform via animation */}
+        {/* Sprite — crop window + scale via transformOrigin top-left */}
         <div
           style={{
             position: 'absolute',
-            width: fw,
-            height: fh,
+            width: cropW,
+            height: cropH,
             backgroundImage: `url(${SPRITE_SRC})`,
             backgroundRepeat: 'no-repeat',
             backgroundPosition: `-${bgX}px -${bgY}px`,
             imageRendering: 'pixelated',
             transformOrigin: 'top left',
-            animation: frozen ? undefined : 'float-sprite 2.8s ease-in-out infinite',
+            animation: frozen ? undefined
+              : isScanning
+                ? 'scan-wobble 400ms ease-in-out infinite alternate'
+                : 'float-sprite 2.8s ease-in-out infinite',
             filter: isTransition ? 'brightness(1.3) saturate(1.15)' : 'none',
             opacity: isTransition ? 0.85 : 1,
             transition: 'filter 0.06s, opacity 0.06s',
           }}
         />
 
-        {/* CSS scan line — only during ESCANEANDO frames */}
+        {/* Scan line — solo durante frames ESCANEANDO */}
         {isScanning && (
           <div
             style={{
               position: 'absolute',
-              left: 18,
-              right: 18,
-              height: 3,
+              left: 10,
+              right: 10,
+              height: 2,
               background: '#00f6ff',
-              filter: 'blur(1px)',
-              opacity: 0.9,
-              boxShadow: '0 0 6px #00f6ff, 0 0 14px #00f6ff, 0 0 28px rgba(0,246,255,0.5)',
-              animation: 'scan-move 720ms linear infinite, scan-pulse 180ms ease-in-out infinite alternate',
+              filter: 'blur(0.5px)',
+              boxShadow: '0 0 4px #00f6ff, 0 0 10px #00f6ff, 0 0 20px rgba(0,246,255,0.4)',
+              animation: 'scan-move 600ms linear infinite',
             }}
           />
         )}
@@ -213,15 +237,19 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           </div>
           <Slider label="FRAME_W" value={dfw} min={50}  max={400} onChange={setDfw} />
           <Slider label="FRAME_H" value={dfh} min={30}  max={400} onChange={setDfh} />
-          <Slider label="START_X" value={dsx} min={0}   max={500} onChange={setDsx} />
-          <Slider label="START_Y" value={dsy} min={0}   max={500} onChange={setDsy} />
+          <Slider label="START_X" value={dsx} min={0}   max={600} onChange={setDsx} />
+          <Slider label="START_Y" value={dsy} min={0}   max={600} onChange={setDsy} />
           <Slider label="GAP_X"   value={dgx} min={0}   max={150} onChange={setDgx} />
           <Slider label="GAP_Y"   value={dgy} min={0}   max={200} onChange={setDgy} />
+          <Slider label="CROP_X"  value={dcx} min={0}   max={150} onChange={setDcx} />
+          <Slider label="CROP_Y"  value={dcy} min={0}   max={150} onChange={setDcy} />
+          <Slider label="CROP_W"  value={dcw} min={20}  max={300} onChange={setDcw} />
+          <Slider label="CROP_H"  value={dch} min={20}  max={300} onChange={setDch} />
           <div className="pt-1 text-[9px] font-mono text-gray-600">
-            frame={frame} item={item} · bgX={sx + frame*(fw+gx)} bgY={sy + item*(fh+gy)}
+            step={step} frame={spriteFrame} item={item} · bgX={bgX} bgY={bgY}
           </div>
           <pre className="text-[9px] font-mono text-cyan-700 select-all leading-relaxed">{
-`FRAME_W=${dfw}\nFRAME_H=${dfh}\nSTART_X=${dsx}\nSTART_Y=${dsy}\nGAP_X=${dgx}\nGAP_Y=${dgy}`
+`FRAME_W=${dfw}\nFRAME_H=${dfh}\nSTART_X=${dsx}\nSTART_Y=${dsy}\nGAP_X=${dgx}\nGAP_Y=${dgy}\nCROP_X=${dcx}\nCROP_Y=${dcy}\nCROP_W=${dcw}\nCROP_H=${dch}`
           }</pre>
         </div>
       )}

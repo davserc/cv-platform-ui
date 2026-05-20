@@ -23,15 +23,21 @@
 }
 
 
-/* WasteScannerLoader — sprite float + scan line */
+/* WasteScannerLoader — sprite animations */
 @keyframes float-sprite {
-  0%,100% { transform: scale(2) translateY(0px);   }
-  50%      { transform: scale(2) translateY(-3px);  }
+  0%,100% { transform: scale(1.45) translateY(0px);   }
+  50%      { transform: scale(1.45) translateY(-2px);  }
+}
+
+@keyframes scan-wobble {
+  from { transform: scale(1.45) translateY(-1px) rotate(-0.8deg); }
+  to   { transform: scale(1.45) translateY(1px)  rotate(0.8deg);  }
 }
 
 @keyframes scan-move {
-  0%   { top: 10%;  }
-  100% { top: 90%;  }
+  0%   { top: 18%; opacity: 0.5; }
+  50%  { opacity: 1;              }
+  100% { top: 76%; opacity: 0.7; }
 }
 
 @keyframes scan-pulse {

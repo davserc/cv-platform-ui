@@ -16,34 +16,35 @@ const FRAME_X = [224, 446, 668, 890, 1112, 1334, 1452]
 //               ini  sc1  sc2  sc3  sc4   comp  trans
 //               |←—— 222px ——→|×5         |118px|
 
-// ── Row Y — top edge of safe crop zone per item ──────────────────────────────
-// Paso real entre filas: 92px (no 88 — la diferencia acumula 4px de drift por fila)
-// Total disponible desde row 0 (y=96) hasta fin de imagen (1024): 928px
-// 10 filas × 92px = 920px + ~8px separador visual = 928px ✓
+// ── Row Y — medido exactamente con debug calibrator ──────────────────────────
+// El spacing no es uniforme: gaps van de 81 a 100px según el objeto.
+// Valores = FRAME_Y[base] + gdy(medido) → posición final exacta por fila.
 const FRAME_Y = [
-   96,  // 01 bottle
-  188,  // 02 can       (+92)
-  280,  // 03 wrapper   (+92)
-  372,  // 04 cup       (+92)
-  464,  // 05 cardboard (+92)
-  556,  // 06 bag       (+92)
-  648,  // 07 glass     (+92)
-  740,  // 08 metal     (+92)
-  832,  // 09 paper     (+92)
-  924,  // 10 tetra     (+92)
+  111,  // 01 bottle    (96+15)
+  211,  // 02 can       (188+23)
+  303,  // 03 wrapper   (280+23)
+  401,  // 04 cup       (372+29)
+  489,  // 05 cardboard (464+25)
+  581,  // 06 bag       (556+25)
+  667,  // 07 glass     (648+19)
+  754,  // 08 metal     (740+14)
+  835,  // 09 paper     (832+3)
+  920,  // 10 tetra     (924-4)
 ]
 
 // ── Safe crop size ────────────────────────────────────────────────────────────
-// Each cell is ~222×88px. Safe crop trims borders/pedestal/label bleed.
-const FRAME_W = 160   // 222 - 2×31px margin = 160
-const FRAME_H = 86    // más alto para capturar objetos como botella vidrio y papel
-const SCALE   = 1.05  // viewport: 168×90px
+// FRAME_H=84: el row más corto del atlas es ~81px (paper).
+// Con 84px el crop queda dentro de cada row sin bleeding ni divisor visible.
+const FRAME_W = 160
+const FRAME_H = 84
+const SCALE   = 1.05  // viewport: 168×88px
 
 const VIEWPORT_W = Math.round(FRAME_W * SCALE)  // 168
-const VIEWPORT_H = Math.round(FRAME_H * SCALE)  // 90
+const VIEWPORT_H = Math.round(FRAME_H * SCALE)  // 88
 
-// Per-row horizontal drift fix (lower rows shift slightly left in the PNG)
-const ROW_X_FIX = [0, 0, -1, -1, -2, -2, -3, -3, -4, -4]
+// Per-item X corrections (medido con debug calibrator)
+// Tetra pak: ROW_X_FIX previo era -4, usuario midió gdx=+8 → net = +4
+const ITEM_X_FIX = [0, 0, -1, -1, -2, -2, -3, -3, -4, 4]
 
 // ── Frame sequence ────────────────────────────────────────────────────────────
 const FRAME_SEQ = [
@@ -112,7 +113,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   }, [step, item, ready, frozen])
 
   const spriteFrame = FRAME_SEQ[step].frame
-  const bgX = FRAME_X[spriteFrame] + ROW_X_FIX[item] + (debug ? ddx : 0)
+  const bgX = FRAME_X[spriteFrame] + ITEM_X_FIX[item] + (debug ? ddx : 0)
   const bgY = FRAME_Y[item]                           + (debug ? ddy : 0)
 
   const isScanning   = spriteFrame >= 1 && spriteFrame <= 4

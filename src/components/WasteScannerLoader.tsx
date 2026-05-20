@@ -140,9 +140,9 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           opacity: 0.92,
         }}
       >
-        {/* Sprite: key={item} fuerza remount en cada cambio → item-appear se dispara */}
+        {/* Sprite: key cambia con item Y con spriteFrame → remount garantizado al entrar en COMPLETADO */}
         <div
-          key={item}
+          key={`${item}-${spriteFrame}`}
           style={{
             position: 'absolute',
             width: FRAME_W,
@@ -156,7 +156,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             // Durante transición: invisible → el flash del overlay oculta el swap
             opacity: isTransition ? 0 : 1,
             animation: frozen || isTransition ? undefined
-              : step === 0
+              : step === 0 || step === 2
                 ? 'item-appear 200ms ease-out, idle-float 3.5s ease-in-out 200ms infinite'
                 : 'idle-float 3.5s ease-in-out infinite',
             filter: GLOW,

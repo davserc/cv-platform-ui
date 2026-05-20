@@ -13,8 +13,8 @@ import { useEffect, useState } from 'react'
 //
 // ── Column X — left edge of safe crop zone per frame ─────────────────────────
 const FRAME_X = [224, 446, 668, 890, 1112, 1334, 1452]
-//               ini  sc1  sc2  sc3  sc4   comp  trans
-//               |←—— 222px ——→|×5         |118px|
+//               ini  sc1  sc2  sc3  comp  trans  (unused)
+//               |←—— 222px ——→|×4
 
 // ── Row Y — medido exactamente con debug calibrator ──────────────────────────
 // El spacing no es uniforme: gaps van de 81 a 100px según el objeto.
@@ -52,8 +52,8 @@ const ITEM_X_FIX = [0, 0, -1, -1, -2, -2, -3, -3, -4, 4]
 const FRAME_SEQ = [
   { frame: 0, duration: 250  },  // 0: INICIO    — objeto aparece
   { frame: 0, duration: 2200 },  // 1: SCANNING  — frame fijo, CSS scan activo
-  { frame: 5, duration: 750  },  // 2: COMPLETADO — sprite verde columna 6
-  { frame: 6, duration: 560  },  // 3: TRANSICIÓN — exit(200ms) + wipe(360ms)
+  { frame: 4, duration: 750  },  // 2: COMPLETADO — FRAME_X[4]=1112
+  { frame: 5, duration: 560  },  // 3: TRANSICIÓN — FRAME_X[5]=1334
 ]
 const OBJECT_HOLD = 0
 

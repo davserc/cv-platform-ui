@@ -17,19 +17,20 @@ const FRAME_X = [224, 446, 668, 890, 1112, 1334, 1452]
 //               |←—— 222px ——→|×5         |118px|
 
 // ── Row Y — top edge of safe crop zone per item ──────────────────────────────
-// Section A (rows 0-4): base=96, step=88
-// Section B (rows 5-9): base=96 + 4×88 + 32(divider) + 88 = 568, step=88
+// Paso real entre filas: 92px (no 88 — la diferencia acumula 4px de drift por fila)
+// Total disponible desde row 0 (y=96) hasta fin de imagen (1024): 928px
+// 10 filas × 92px = 920px + ~8px separador visual = 928px ✓
 const FRAME_Y = [
    96,  // 01 bottle
-  184,  // 02 can       (+88)
-  272,  // 03 wrapper   (+88)
-  360,  // 04 cup       (+88)
-  448,  // 05 cardboard (+88)
-  568,  // 06 bag       (+88 +32 DIVIDER)
-  656,  // 07 glass     (+88)
-  744,  // 08 metal     (+88)
-  832,  // 09 paper     (+88)
-  920,  // 10 tetra     (+88)
+  188,  // 02 can       (+92)
+  280,  // 03 wrapper   (+92)
+  372,  // 04 cup       (+92)
+  464,  // 05 cardboard (+92)
+  556,  // 06 bag       (+92)
+  648,  // 07 glass     (+92)
+  740,  // 08 metal     (+92)
+  832,  // 09 paper     (+92)
+  924,  // 10 tetra     (+92)
 ]
 
 // ── Safe crop size ────────────────────────────────────────────────────────────
@@ -242,6 +243,22 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
               {frozen ? '▶ reanudar' : '⏸ pausar'}
             </button>
           </div>
+
+          {/* Selector de ítem — para verificar cada fila sin esperar el ciclo */}
+          <div className="flex gap-1 flex-wrap">
+            {ITEMS.map((_, i) => (
+              <button key={i}
+                onClick={() => { setItem(i); setStep(0); setFrozen(true) }}
+                className={`text-[8px] font-mono px-1.5 py-0.5 rounded border transition-colors ${
+                  item === i
+                    ? 'border-cyan-500 text-cyan-300 bg-cyan-950'
+                    : 'border-gray-700 text-gray-600 hover:text-gray-400'
+                }`}>
+                {i + 1}
+              </button>
+            ))}
+          </div>
+
           <label className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
             <span className="w-16 text-right">global X</span>
             <input type="range" min={-40} max={40} value={ddx}
@@ -257,12 +274,9 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             <span className="w-8 text-cyan-400">{ddy > 0 ? `+${ddy}` : ddy}</span>
           </label>
           <div className="pt-1 border-t border-gray-800 text-[9px] font-mono text-gray-600 space-y-0.5">
-            <div>frame={spriteFrame} step={step} item={item}/{ITEMS[item].name}</div>
-            <div>bgX={bgX} ({FRAME_X[spriteFrame]}+{ROW_X_FIX[item]}+{ddx})</div>
-            <div>bgY={bgY} ({FRAME_Y[item]}+{ddy})</div>
-            <div className="text-amber-600">
-              {item < 5 ? '▲ sección A (sin divisor)' : '▼ sección B (post-divisor +32px)'}
-            </div>
+            <div>frame={spriteFrame} item={item} — {ITEMS[item].name}</div>
+            <div>bgX={bgX}  bgY={bgY}</div>
+            <div>FRAME_Y[{item}]={FRAME_Y[item]}  step=92px</div>
           </div>
           <pre className="text-[9px] font-mono text-cyan-700 select-all">{
 `FRAME_X[${spriteFrame}]=${FRAME_X[spriteFrame]}\nFRAME_Y[${item}]=${FRAME_Y[item]}\ngdx=${ddx} gdy=${ddy}`

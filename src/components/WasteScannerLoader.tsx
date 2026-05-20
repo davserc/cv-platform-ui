@@ -120,7 +120,6 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   const inicioBgX     = FRAME_X[0] + xFix
   const completadoBgX = FRAME_X[4] + xFix + (debug ? dcx : 0)
   const completadoBgY = bgY + COMPLETE_Y_FIX + (debug ? dcy : 0)
-  const transicioBgX  = FRAME_X[5] + xFix
 
   if (!ready) {
     return (
@@ -156,11 +155,11 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             height: FRAME_H,
             backgroundImage: `url(${SPRITE_SRC})`,
             backgroundRepeat: 'no-repeat',
-            backgroundPosition: isTransition
-              ? `-${transicioBgX}px -${bgY}px`
-              : isComplete
-                ? `-${completadoBgX}px -${completadoBgY}px`
-                : `-${inicioBgX}px -${bgY}px`,
+            // Durante TRANSICIÓN mantiene el frame verde (mismo bgX/Y que COMPLETADO)
+            // para evitar salto visual — el sprite se desvanece con transition-out
+            backgroundPosition: (isComplete || isTransition)
+              ? `-${completadoBgX}px -${completadoBgY}px`
+              : `-${inicioBgX}px -${bgY}px`,
             imageRendering: 'pixelated',
             transformOrigin: 'top left',
             // Opacity 1 siempre; durante TRANSICIÓN se desvanece via 'transition-out'

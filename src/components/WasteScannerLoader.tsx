@@ -161,8 +161,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           }}
         />
 
-        {/* ── Sprite COMPLETADO — div propio, solo cuando step===2 ──────────────── */}
-        {/* Usa completado-appear (no item-appear) para evitar conflicto de scale+opacity */}
+        {/* ── Sprite COMPLETADO — sin animación de fade, visible directo ── */}
         {isComplete && (
           <div
             style={{
@@ -171,11 +170,13 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
               height: FRAME_H,
               backgroundImage: `url(${SPRITE_SRC})`,
               backgroundRepeat: 'no-repeat',
-              backgroundPosition: `-${FRAME_X[5] + ITEM_X_FIX[item]}px -${bgY}px`,
+              backgroundPosition: `-${bgX}px -${bgY}px`,
               imageRendering: 'pixelated',
               transformOrigin: 'top left',
-              animation: 'completado-appear 150ms ease-out, idle-float 3.5s ease-in-out 150ms infinite',
+              opacity: 1,
+              transform: 'scale(1.05)',
               filter: GLOW,
+              outline: debug ? '2px solid #4ade80' : undefined,
             }}
           />
         )}
@@ -263,7 +264,24 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             </button>
           </div>
 
-          {/* Selector de ítem — para verificar cada fila sin esperar el ciclo */}
+          {/* Selector de STEP — para forzar COMPLETADO (step 2) y calibrar X */}
+          <div className="flex gap-1 items-center">
+            <span className="text-[8px] font-mono text-gray-600 w-10">step:</span>
+            {['INICIO','SCAN','COMP','TRANS'].map((label, s) => (
+              <button key={s}
+                onClick={() => { setStep(s); setFrozen(true) }}
+                className={`text-[8px] font-mono px-1.5 py-0.5 rounded border ${
+                  step === s
+                    ? s === 2 ? 'border-green-500 text-green-300 bg-green-950'
+                              : 'border-cyan-500 text-cyan-300 bg-cyan-950'
+                    : 'border-gray-700 text-gray-600 hover:text-gray-400'
+                }`}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Selector de ítem */}
           <div className="flex gap-1 flex-wrap">
             {ITEMS.map((_, i) => (
               <button key={i}
@@ -293,12 +311,12 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             <span className="w-8 text-cyan-400">{ddy > 0 ? `+${ddy}` : ddy}</span>
           </label>
           <div className="pt-1 border-t border-gray-800 text-[9px] font-mono text-gray-600 space-y-0.5">
-            <div>frame={spriteFrame} item={item} — {ITEMS[item].name}</div>
+            <div>step={step} frame={spriteFrame} item={item} — {ITEMS[item].name}</div>
             <div>bgX={bgX}  bgY={bgY}</div>
-            <div>FRAME_Y[{item}]={FRAME_Y[item]}  step=92px</div>
+            {isComplete && <div className="text-green-500">COMPLETADO bgX={bgX} (FRAME_X[5]={FRAME_X[5]}+{ddx})</div>}
           </div>
           <pre className="text-[9px] font-mono text-cyan-700 select-all">{
-`FRAME_X[${spriteFrame}]=${FRAME_X[spriteFrame]}\nFRAME_Y[${item}]=${FRAME_Y[item]}\ngdx=${ddx} gdy=${ddy}`
+`FRAME_X[5]=${FRAME_X[5]}\nFRAME_Y[${item}]=${FRAME_Y[item]}\ngdx=${ddx} gdy=${ddy}`
           }</pre>
         </div>
       )}

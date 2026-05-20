@@ -81,9 +81,11 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   const [step,   setStep]   = useState(0)
   const [frozen, setFrozen] = useState(false)
 
-  // Debug: ajuste global de offset (no modifica W/H — eso rompería el crop)
+  // Debug: ajuste global (INICIO/SCANNING) y ajuste exclusivo para COMPLETADO
   const [ddx, setDdx] = useState(0)
   const [ddy, setDdy] = useState(0)
+  const [dcx, setDcx] = useState(0)   // fine-tune X solo para COMPLETADO
+  const [dcy, setDcy] = useState(0)   // fine-tune Y solo para COMPLETADO
 
   useEffect(() => {
     const img = new Image()
@@ -116,8 +118,9 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
   // Posiciones explícitas por estado
   const xFix          = ITEM_X_FIX[item] + (debug ? ddx : 0)
   const inicioBgX     = FRAME_X[0] + xFix
-  const completadoBgX = FRAME_X[4] + xFix
-  const transicioBgX  = FRAME_X[5] + xFix   // columna transición: scan lines
+  const completadoBgX = FRAME_X[4] + xFix + (debug ? dcx : 0)
+  const completadoBgY = bgY + COMPLETE_Y_FIX + (debug ? dcy : 0)
+  const transicioBgX  = FRAME_X[5] + xFix
 
   if (!ready) {
     return (
@@ -156,7 +159,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             backgroundPosition: isTransition
               ? `-${transicioBgX}px -${bgY}px`
               : isComplete
-                ? `-${completadoBgX}px -${bgY + COMPLETE_Y_FIX}px`
+                ? `-${completadoBgX}px -${completadoBgY}px`
                 : `-${inicioBgX}px -${bgY}px`,
             imageRendering: 'pixelated',
             transformOrigin: 'top left',
@@ -289,10 +292,27 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           </label>
           <div className="pt-1 border-t border-gray-800 text-[9px] font-mono text-gray-600 space-y-0.5">
             <div>step={step} item={item} — {ITEMS[item].name}</div>
-            <div>inicio={inicioBgX} comp={completadoBgX} bgY={bgY}</div>
+            <div>inicio=({inicioBgX},{bgY}) comp=({completadoBgX},{completadoBgY})</div>
           </div>
+
+          {/* Sliders exclusivos para alinear COMPLETADO con INICIO */}
+          <div className="text-[9px] font-mono text-green-600 pt-1">ajuste COMPLETADO</div>
+          <label className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
+            <span className="w-16 text-right">comp X</span>
+            <input type="range" min={-30} max={30} value={dcx}
+              onChange={e => setDcx(Number(e.target.value))}
+              className="w-28 accent-green-500" />
+            <span className="w-8 text-green-400">{dcx > 0 ? `+${dcx}` : dcx}</span>
+          </label>
+          <label className="flex items-center gap-2 text-[10px] font-mono text-gray-400">
+            <span className="w-16 text-right">comp Y</span>
+            <input type="range" min={-30} max={30} value={dcy}
+              onChange={e => setDcy(Number(e.target.value))}
+              className="w-28 accent-green-500" />
+            <span className="w-8 text-green-400">{dcy > 0 ? `+${dcy}` : dcy}</span>
+          </label>
           <pre className="text-[9px] font-mono text-cyan-700 select-all">{
-`FRAME_X[0]=${FRAME_X[0]} FRAME_X[4]=${FRAME_X[4]}\nFRAME_Y[${item}]=${FRAME_Y[item]}\ngdx=${ddx} gdy=${ddy}`
+`FRAME_X[4]=${FRAME_X[4]}  COMPLETE_Y_FIX=${COMPLETE_Y_FIX}\ndcx=${dcx} dcy=${dcy}\n→ bake: FRAME_X[4]=${FRAME_X[4]+dcx}  Y_FIX=${COMPLETE_Y_FIX+dcy}`
           }</pre>
         </div>
       )}

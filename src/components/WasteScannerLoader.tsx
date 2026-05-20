@@ -134,18 +134,6 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           />
         </div>
 
-        {/* CSS scan line — 700ms sweep, left/right inset */}
-        {isScanning && (
-          <div className="absolute pointer-events-none" style={{
-            left: 12, right: 12,
-            height: 3,
-            background: '#00f6ff',
-            filter: 'blur(1px)',
-            boxShadow: '0 0 8px #00f6ff, 0 0 18px #00f6ff',
-            animation: 'scan-sweep 0.7s linear infinite',
-          }} />
-        )}
-
         {/* Completed green glow */}
         {isComplete && (
           <div className="absolute inset-0 pointer-events-none" style={{

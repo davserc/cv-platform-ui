@@ -22,12 +22,6 @@
   to   { transform: rotate(360deg) translateX(78px) rotate(-360deg); }
 }
 
-/* WasteScannerLoader — laser line sweeps top→bottom while scanning */
-@keyframes scan-sweep {
-  0%   { top: 22%; opacity: 0.8; }
-  50%  { top: 50%; opacity: 1;   }
-  100% { top: 72%; opacity: 0.8; }
-}
 
 /* WasteScannerLoader — hologram platform float */
 @keyframes float-obj {

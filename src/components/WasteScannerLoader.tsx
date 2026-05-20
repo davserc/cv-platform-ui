@@ -107,14 +107,16 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
     return () => clearTimeout(id)
   }, [step, item, ready, frozen])
 
-  const spriteFrame = FRAME_SEQ[step].frame
-  const bgX = FRAME_X[spriteFrame] + ITEM_X_FIX[item] + (debug ? ddx : 0)
-  const bgY = FRAME_Y[item]                            + (debug ? ddy : 0)
+  const bgY = FRAME_Y[item] + (debug ? ddy : 0)
 
-  // Detectar estado por índice de step (no por spriteFrame — durante scan siempre es 0)
   const isScanning   = step === 1
   const isComplete   = step === 2
   const isTransition = step === 3
+
+  // Posiciones explícitas — no derivadas de spriteFrame para evitar confusión
+  const xFix   = ITEM_X_FIX[item] + (debug ? ddx : 0)
+  const inicioBgX    = FRAME_X[0] + xFix
+  const completadoBgX = FRAME_X[4] + xFix
 
   if (!ready) {
     return (
@@ -140,7 +142,8 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           opacity: 0.92,
         }}
       >
-        {/* ── Sprite INICIO / SCANNING (frame 0) ─────────────────── */}
+        {/* ── Un solo sprite — backgroundPosition cambia al llegar a COMPLETADO ── */}
+        {/* Sin segundo div: el idle-float continúa sin interrupciones, sin zoom */}
         <div
           key={item}
           style={{
@@ -149,37 +152,24 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             height: FRAME_H,
             backgroundImage: `url(${SPRITE_SRC})`,
             backgroundRepeat: 'no-repeat',
-            backgroundPosition: `-${FRAME_X[0] + ITEM_X_FIX[item]}px -${bgY}px`,
+            backgroundPosition: (isComplete || isTransition)
+              ? `-${completadoBgX}px -${bgY + COMPLETE_Y_FIX}px`
+              : `-${inicioBgX}px -${bgY}px`,
             imageRendering: 'pixelated',
             transformOrigin: 'top left',
-            opacity: (isComplete || isTransition) ? 0 : 1,
+            opacity: isTransition ? 0 : 1,
+            // Fade-out suave al entrar en TRANSICIÓN; sin transition en otros estados
+            // para que item-appear no conflictúe
+            transition: isTransition ? 'opacity 260ms ease-in' : undefined,
             animation: frozen ? undefined
               : step === 0
                 ? 'item-appear 200ms ease-out, idle-float 3.5s ease-in-out 200ms infinite'
                 : 'idle-float 3.5s ease-in-out infinite',
-            filter: GLOW,
+            filter: isComplete
+              ? 'drop-shadow(0 0 4px rgba(74,222,128,.3)) drop-shadow(0 0 10px rgba(74,222,128,.15))'
+              : GLOW,
           }}
         />
-
-        {/* ── Sprite COMPLETADO — sin animación de fade, visible directo ── */}
-        {isComplete && (
-          <div
-            style={{
-              position: 'absolute',
-              width: FRAME_W,
-              height: FRAME_H,
-              backgroundImage: `url(${SPRITE_SRC})`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: `-${bgX}px -${bgY + COMPLETE_Y_FIX}px`,
-              imageRendering: 'pixelated',
-              transformOrigin: 'top left',
-              opacity: 1,
-              transform: 'scale(1.05)',
-              filter: GLOW,
-              outline: debug ? '2px solid #4ade80' : undefined,
-            }}
-          />
-        )}
 
         {/* Scan line */}
         {isScanning && (
@@ -197,34 +187,25 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
           />
         )}
 
-        {/* Completed glow */}
+        {/* Green glow durante COMPLETADO */}
         {isComplete && (
           <div className="absolute inset-0 pointer-events-none" style={{
-            background: 'radial-gradient(ellipse at center, rgba(74,222,128,0.18) 0%, transparent 68%)',
+            background: 'radial-gradient(ellipse at center, rgba(74,222,128,0.14) 0%, transparent 68%)',
             animation: 'pulse-scale 0.9s ease-in-out infinite',
           }} />
         )}
 
-        {/* ── Transición: fondo oscuro inmediato + barra cyan barre ── */}
+        {/* ── Transición: fondo + wipe con z-index explícito ──────── */}
         {isTransition && (
           <>
-            {/* Fondo oscuro inmediato — cubre el recorte del COMPLETADO */}
             <div className="absolute inset-0 pointer-events-none"
-              style={{ background: 'rgba(0,5,10,0.96)' }} />
-            {/* Barra cyan que barre de arriba a abajo */}
+              style={{ background: '#000810', zIndex: 10 }} />
             <div className="absolute inset-x-0 pointer-events-none" style={{
-              height: 3,
-              background: 'linear-gradient(90deg, transparent 0%, #00f6ff 25%, #fff 50%, #00f6ff 75%, transparent 100%)',
-              boxShadow: '0 0 8px #00f6ff, 0 0 24px rgba(0,246,255,0.7)',
-              filter: 'blur(0.5px)',
-              animation: 'system-wipe 460ms ease-in-out forwards',
-              opacity: 0,
-            }} />
-            {/* Trail */}
-            <div className="absolute inset-x-0 pointer-events-none" style={{
-              height: 32,
-              background: 'linear-gradient(180deg, rgba(0,246,255,0.08) 0%, transparent 100%)',
-              animation: 'system-wipe-trail 460ms ease-in-out forwards',
+              height: 2,
+              zIndex: 11,
+              background: 'linear-gradient(90deg, transparent 0%, #00f6ff 30%, #fff 50%, #00f6ff 70%, transparent 100%)',
+              boxShadow: '0 0 8px #00f6ff, 0 0 20px rgba(0,246,255,0.6)',
+              animation: 'system-wipe 420ms ease-in-out forwards',
               opacity: 0,
             }} />
           </>
@@ -232,7 +213,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
 
         {debug && (
           <div className="absolute inset-0 pointer-events-none"
-            style={{ border: '1px dashed rgba(255,50,50,0.7)' }} />
+            style={{ border: '1px dashed rgba(255,50,50,0.7)', zIndex: 20 }} />
         )}
       </div>
 
@@ -264,7 +245,6 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             </button>
           </div>
 
-          {/* Selector de STEP — para forzar COMPLETADO (step 2) y calibrar X */}
           <div className="flex gap-1 items-center">
             <span className="text-[8px] font-mono text-gray-600 w-10">step:</span>
             {['INICIO','SCAN','COMP','TRANS'].map((label, s) => (
@@ -281,7 +261,6 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             ))}
           </div>
 
-          {/* Selector de ítem */}
           <div className="flex gap-1 flex-wrap">
             {ITEMS.map((_, i) => (
               <button key={i}
@@ -311,12 +290,11 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
             <span className="w-8 text-cyan-400">{ddy > 0 ? `+${ddy}` : ddy}</span>
           </label>
           <div className="pt-1 border-t border-gray-800 text-[9px] font-mono text-gray-600 space-y-0.5">
-            <div>step={step} frame={spriteFrame} item={item} — {ITEMS[item].name}</div>
-            <div>bgX={bgX}  bgY={bgY}</div>
-            {isComplete && <div className="text-green-500">COMPLETADO bgX={bgX} (FRAME_X[5]={FRAME_X[5]}+{ddx})</div>}
+            <div>step={step} item={item} — {ITEMS[item].name}</div>
+            <div>inicio={inicioBgX} comp={completadoBgX} bgY={bgY}</div>
           </div>
           <pre className="text-[9px] font-mono text-cyan-700 select-all">{
-`FRAME_X[5]=${FRAME_X[5]}\nFRAME_Y[${item}]=${FRAME_Y[item]}\ngdx=${ddx} gdy=${ddy}`
+`FRAME_X[0]=${FRAME_X[0]} FRAME_X[4]=${FRAME_X[4]}\nFRAME_Y[${item}]=${FRAME_Y[item]}\ngdx=${ddx} gdy=${ddy}`
           }</pre>
         </div>
       )}

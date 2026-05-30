@@ -76,6 +76,8 @@ export const FIELD_DESCRIPTIONS: Partial<Record<keyof FormState, string>> = {
     'URL HTTP/HTTPS del dataset a descargar. Debe ser un .zip con estructura YOLO (carpetas images/ y labels/).',
 
   // Optional general
+  notify_email:
+    'Email al que se enviará la notificación cuando el job finalice (éxito o error). Si se deja vacío se usa el destinatario configurado en el servidor.',
   device:
     'Dispositivo de cómputo. "0" para la primera GPU, "0,1" para múltiples GPUs, "cpu" para CPU (mucho más lento).',
   install_gsutil:

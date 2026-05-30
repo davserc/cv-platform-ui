@@ -31,6 +31,7 @@ export function buildConfig(f: FormState): TrainConfig {
     save: f.save,
   }
 
+  if (f.notify_email) cfg.notify_email = f.notify_email
   if (f.device) cfg.device = f.device
 
   for (const key of PHASE_KEYS) {

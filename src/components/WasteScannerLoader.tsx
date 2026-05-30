@@ -17,7 +17,6 @@ const FRAME_X = [224, 446, 668, 890, 1149, 1334]
 const COMPLETE_Y_FIX = 1  // offset Y del sprite COMPLETADO vs INICIO (calibrado)
 
 // ── Row Y — medido exactamente con debug calibrator ──────────────────────────
-// El spacing no es uniforme: gaps van de 81 a 100px según el objeto.
 // Valores = FRAME_Y[base] + gdy(medido) → posición final exacta por fila.
 const FRAME_Y = [
   111,  // 01 bottle    (96+15)
@@ -48,7 +47,7 @@ const ITEM_X_FIX = [0, 0, -1, -1, -2, -2, -3, -3, -4, 4]
 
 // ── Frame sequence ────────────────────────────────────────────────────────────
 // El objeto siempre muestra frame 0 durante el escaneo — la ilusión de scan
-// la genera SOLO el CSS scan line. Sin ciclar frames → sin efecto carrusel.
+// la genera SOLO el CSS scan line.
 const FRAME_SEQ = [
   { frame: 0, duration: 250  },  // 0: INICIO    — objeto aparece
   { frame: 0, duration: 2200 },  // 1: SCANNING  — frame fijo, CSS scan activo
@@ -135,7 +134,7 @@ export default function WasteScannerLoader({ jobId, debug = false }: Props) {
     <div className="flex flex-col items-center gap-3 py-5 select-none">
 
       {/* ── Viewport + padding de centrado ──────────────────────── */}
-      <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: '.8' }}>
       <div
         style={{
           position: 'relative',

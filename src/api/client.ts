@@ -33,6 +33,7 @@ export interface TrainConfig {
   dataset_gs_uri?: string
   train_dataset_url?: string
   // Optional general
+  notify_email?: string
   device?: string
   install_gsutil?: boolean
   save?: boolean
@@ -109,10 +110,40 @@ export interface TrainLogsResponse {
 export const fetchTrainingLogs = (jobId: string) =>
   request<TrainLogsResponse>(`/train/${jobId}/logs`)
 
+export interface RunningJobsResponse {
+  active: boolean
+  running_job_ids: string[]
+}
+
+export const fetchRunningTrainingJobs = () =>
+  request<RunningJobsResponse>('/train/running')
+
+export interface JobStatus {
+  job_id: string
+  status: string
+  started_at: string | null
+  finished_at: string | null
+  error: string | null
+}
+
+export interface RecentJobsResponse {
+  items: JobStatus[]
+}
+
+export const fetchRecentTrainingJobs = () =>
+  request<RecentJobsResponse>('/train/recent')
+
 // --- Models ---
 export interface ModelSummary {
   model_id: string
   status: string | null
+  name: string | null
+  version: string | null
+  artifact_uri: string | null
+  job_id: string | null
+  metrics: Record<string, number> | null
+  created_at: string | null
+  updated_at: string | null
 }
 
 export interface ModelsListResponse {
@@ -171,5 +202,7 @@ export const uploadAndGetAnnotated = async (file: File, modelId?: string): Promi
     throw new Error(`${res.status} ${res.statusText}: ${text}`)
   }
   const blob = await res.blob()
-  return URL.createObjectURL(blob)
+  // Force image/png so browsers that receive a generic content-type still render it
+  const imageBlob = blob.type.startsWith('image/') ? blob : new Blob([blob], { type: 'image/png' })
+  return URL.createObjectURL(imageBlob)
 }

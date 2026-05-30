@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchTrainingLogs } from '../../../api/client'
 import WasteScannerLoader from '../../../components/WasteScannerLoader'
+import TrainingProgress from './TrainingProgress'
+import { parseTrainingLog } from '../parseTrainingLog'
 
 const POLL_INTERVAL_MS = 15_000
 
@@ -13,7 +15,6 @@ export default function TrainingLogViewer({ jobId }: Props) {
   const [available, setAvailable] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     let active = true
@@ -38,12 +39,7 @@ export default function TrainingLogViewer({ jobId }: Props) {
     }
   }, [jobId])
 
-  // Auto-scroll al final cuando llega nuevo contenido
-  useEffect(() => {
-    if (log && bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [log])
+  const parsed = available && log ? parseTrainingLog(log) : null
 
   return (
     <div className="border border-gray-800 rounded-lg overflow-hidden">
@@ -56,9 +52,7 @@ export default function TrainingLogViewer({ jobId }: Props) {
             <span className="w-2 h-2 rounded-full bg-gray-600" />
           )}
           <span className="text-xs text-gray-400 font-mono">train.log</span>
-          <span className="text-xs text-gray-600 font-mono truncate max-w-48">
-            {jobId}
-          </span>
+          <span className="text-xs text-gray-600 font-mono truncate max-w-48">{jobId}</span>
         </div>
         {lastUpdated && (
           <span className="text-[10px] text-gray-600">
@@ -67,19 +61,14 @@ export default function TrainingLogViewer({ jobId }: Props) {
         )}
       </div>
 
-      {/* Log content */}
-      <div
-        ref={containerRef}
-        className="overflow-auto max-h-80 bg-gray-950 p-3"
-      >
+      {/* Content */}
+      <div className="bg-gray-950 p-3">
         {!available ? (
           <WasteScannerLoader jobId={jobId} />
-        ) : log ? (
-          <pre className="text-xs font-mono text-gray-300 whitespace-pre-wrap leading-relaxed">
-            {log}
-          </pre>
+        ) : parsed ? (
+          <TrainingProgress parsed={parsed} rawLog={log} />
         ) : (
-          <p className="text-xs text-gray-600 italic">Sin contenido aún.</p>
+          <p className="text-xs text-gray-600 italic font-mono">Sin contenido aún.</p>
         )}
         <div ref={bottomRef} />
       </div>

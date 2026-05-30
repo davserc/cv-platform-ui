@@ -1,13 +1,47 @@
-import { useState } from 'react'
-import { submitTrainingJob } from '../../api/client'
+import { useEffect, useRef, useState } from 'react'
+import { fetchRecentTrainingJobs, fetchRunningTrainingJobs, submitTrainingJob, type JobStatus } from '../../api/client'
 import { buildConfig } from './buildConfig'
 import { INITIAL, type FormState, type JobEntry } from './types'
 
 export function useTrainingForm() {
   const [form, setForm] = useState<FormState>(INITIAL)
   const [jobs, setJobs] = useState<JobEntry[]>([])
+  const [runningJobIds, setRunningJobIds] = useState<string[]>([])
+  const [jobDetails, setJobDetails] = useState<Record<string, JobStatus>>({})
+  const everRanRef = useRef<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+
+    const refresh = async () => {
+      try {
+        const [runningRes, recentRes] = await Promise.all([
+          fetchRunningTrainingJobs(),
+          fetchRecentTrainingJobs(),
+        ])
+        const ids = runningRes.running_job_ids ?? []
+        ids.forEach(id => everRanRef.current.add(id))
+        if (!mounted) return
+        setRunningJobIds(ids)
+        const details: Record<string, JobStatus> = {}
+        for (const item of recentRes.items) {
+          details[item.job_id] = item
+        }
+        setJobDetails(details)
+      } catch {
+        if (mounted) setRunningJobIds([])
+      }
+    }
+
+    refresh()
+    const id = setInterval(refresh, 10000)
+    return () => {
+      mounted = false
+      clearInterval(id)
+    }
+  }, [])
 
   const setStr =
     (field: keyof FormState) =>
@@ -49,5 +83,18 @@ export function useTrainingForm() {
     }
   }
 
-  return { form, setStr, setBool, setDatasetSource, jobs, loading, error, handleSubmit }
+  return {
+    form,
+    setStr,
+    setBool,
+    setForm,
+    setDatasetSource,
+    jobs,
+    runningJobIds,
+    everRanIds: everRanRef.current,
+    jobDetails,
+    loading,
+    error,
+    handleSubmit,
+  }
 }

@@ -8,6 +8,7 @@ export interface FormState {
   dataset_gs_uri: string
   train_dataset_url: string
   // Optional general
+  notify_email: string
   device: string
   install_gsutil: boolean
   save: boolean
@@ -69,6 +70,7 @@ export const INITIAL: FormState = {
   dataset_source: 'gs',
   dataset_gs_uri: 'gs://dataset-unlu-module-4/taco_yolo_13_seg.zip',
   train_dataset_url: '',
+  notify_email: '',
   device: '0',
   install_gsutil: true,
   save: true,

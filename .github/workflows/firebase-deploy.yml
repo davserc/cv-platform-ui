@@ -1,0 +1,46 @@
+name: Deploy to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          # Secret en GitHub → Settings → Secrets → VITE_API_BASE_URL
+          # Valor: http://<EXTERNAL-IP del svc api-gateway en GKE>/api/v1
+          # Obtener con: kubectl get svc api-gateway -n cv-platform
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          # Secret en GitHub → Settings → Secrets → FIREBASE_SERVICE_ACCOUNT
+          # Crear en: Firebase Console → Project Settings → Service Accounts → Generate new private key
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          # Reemplazar con el ID del proyecto Firebase (mismo que en .firebaserc)
+          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}

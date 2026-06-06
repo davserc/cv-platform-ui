@@ -1,52 +1,101 @@
 ﻿# CV Platform UI
 
-Frontend web de la plataforma de visión por computadora. Provee interfaz para entrenamiento, gestión de modelos e inferencia, consumiendo la API del backend.
+Frontend web de la plataforma de visión por computadora. Provee interfaz para entrenamiento, gestión de modelos e inferencia, consumiendo la API del backend ([cv-cloudgpu-platform](../cv-cloudgpu-platform)).
 
 ## Estructura
-- `src/pages/` pantallas principales (`Training`, `Models`, `Inference`, `Config`)
-- `src/features/training/` lógica y componentes del flujo de entrenamiento
-- `src/api/client.ts` cliente HTTP y contratos de requests/responses
-- `src/context/` estado global (API Key)
-- `public/` assets estáticos
+
+```
+src/
+  pages/          Training, Models, Inference, Config
+  features/       Lógica del flujo de entrenamiento
+  api/client.ts   Cliente HTTP y contratos de API
+  context/        Estado global (API Key)
+public/           Assets estáticos (logos, sprites)
+```
 
 ## Requisitos
+
 - Node.js 20+
 - npm 10+
-- Backend disponible (por defecto en `/api/v1`)
 
-## Uso rápido (local)
-1. Instalar dependencias:
-   - `npm install`
-2. Crear entorno local:
-   - `cp .env.example .env.local`
-3. Ejecutar en desarrollo:
-   - `npm run dev`
-4. Abrir la URL de Vite (normalmente `http://localhost:5173`)
+## Ejecución local
 
-Variables de entorno (`.env.local`):
-- `VITE_API_BASE_URL` (sin slash final)
-  - Desarrollo con proxy: `/api/v1`
-  - Staging/Prod: `https://<host>/api/v1`
+```bash
+# 1. Instalar dependencias
+npm install
 
-API Key:
-- No se define en `.env`.
-- Se carga en la pantalla `Config` y se guarda en `localStorage` (`cv_api_key`).
-- Sin API key, las rutas funcionales requieren configuración previa.
+# 2. Configurar entorno
+cp .env.example .env.local
+# Por defecto apunta a /api/v1 — el proxy de Vite redirige al backend
+
+# 3. Iniciar dev server
+npm run dev
+# → http://localhost:5173
+```
+
+### Proxy de Vite (local)
+
+`vite.config.ts` redirige `/api` al backend. Por defecto apunta al GKE LoadBalancer en producción.
+Para desarrollo local con kind, cambiar `target` a `http://localhost:8080` (puerto del port-forward del api-gateway):
+
+```ts
+// vite.config.ts
+proxy: {
+  '/api': {
+    target: 'http://localhost:8080',  // kind local
+    // target: 'http://34.45.21.197', // GKE producción
+    changeOrigin: true,
+  },
+},
+```
+
+### API Key
+
+No se define en `.env`. Se ingresa en la pantalla **Config** y se guarda en `localStorage` bajo la clave `cv_api_key`.
 
 ## Scripts
-- `npm run dev` desarrollo con hot reload
-- `npm run build` chequeo TypeScript + build de Vite
-- `npm run preview` servir build local
 
-## Integración con backend
-- Endpoints esperados bajo la base configurada en `VITE_API_BASE_URL`.
-- Para entornos sin proxy local, el backend debe habilitar CORS para el origen del frontend.
+| Comando | Descripción |
+|---------|-------------|
+| `npm run dev` | Dev server con hot reload |
+| `npm run build` | Type-check TypeScript + build Vite |
+| `npm run preview` | Servir el build de producción localmente |
+
+## Deploy en producción (Firebase Hosting)
+
+La app se despliega automáticamente a Firebase Hosting vía GitHub Actions al hacer push a `main`.
+
+Para deploy manual:
+
+```bash
+# Build de producción (usa VITE_API_BASE_URL del .env.production)
+npm run build
+
+# Deploy a Firebase Hosting
+npx firebase-tools deploy --only hosting --project cv-platform-fbd07
+```
+
+El archivo `.env.production` (no commiteado) debe tener:
+```
+VITE_API_BASE_URL=http://<IP_GKE_LB>/api/v1
+```
+
+Obtener la IP con:
+```bash
+kubectl get svc api-gateway -n cv-platform
+```
+
+> El `api-proxy` (Nginx en Cloud Run) maneja CORS entre Firebase (`cv-platform-fbd07.web.app`) y el GKE api-gateway. Ver [`api-proxy/`](../api-proxy).
 
 ## Troubleshooting
-- `401/403`: validar API key en `Config` y credencial backend.
-- `Failed to fetch`: verificar backend activo y `VITE_API_BASE_URL`.
-- Error CORS: revisar `CORS_ALLOW_ORIGINS` del backend.
-- Cambios en `.env.local`: reiniciar `npm run dev`.
+
+| Error | Causa probable | Solución |
+|-------|---------------|----------|
+| `401/403` | API key incorrecta | Validar en pantalla Config |
+| `Failed to fetch` | Backend inaccesible | Verificar `VITE_API_BASE_URL` y que el backend esté corriendo |
+| CORS error | Origen no autorizado | Revisar `CORS_ALLOW_ORIGINS` en api-gateway |
+| Variables no aplicadas | `.env.local` no recargado | Reiniciar `npm run dev` |
 
 ## Estado
+
 Aplicación funcional para entrenamiento, modelos e inferencia, con evolución incremental de UX y observabilidad.
